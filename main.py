@@ -146,11 +146,33 @@ def translate(v):
     A = Matrix22(x,y,-y,x)
     return A,Ainv
 
+def gen_text(w, h, title, msgs=None):
+    if msgs is None:
+        msgs = []
+    s = pg.Surface((w, h))
+    s.fill("#ffffff")
+    my_font1 = pg.font.SysFont("Calibri",50)
+    my_font2 = pg.font.SysFont("Calibri",15)
+    ft=my_font1.render(title, False, "#000000")
+    s.blit(ft,(w/2-ft.get_width()/2,h/2-ft.get_height()/2))
+    h = h/2+ft.get_height()/2
+    for msg in msgs:
+        f2=my_font2.render(msg, False, "#000000")
+        s.blit(f2,(w/2-f2.get_width()/2,h))
+        h += f2.get_height()
+    return s
+
 class Main:
     def __init__(self):
-        self.screen = pg.display.set_mode(INIT_SIZE,pg.RESIZABLE)
+        self.screen = pg.display.set_mode(INIT_SIZE, pg.RESIZABLE)
         pg.display.set_caption("Game")
-        self.game = Game(pg.Surface(INIT_SIZE))
+        self.game = Game(*INIT_SIZE)
+        self.win_screen = None
+        self.lose_screen1 = None
+        self.lose_screen2 = None
+        self.resize(*INIT_SIZE)
+        # 0:normal, 1:pause, 2:win, 3:fall to star, 4: black hole
+        self.state = 0
     
     def mainloop(self):
         clock = pg.time.Clock()
@@ -159,21 +181,24 @@ class Main:
         g = self.game
         while running:
             #sim stuff
-            if  g.state == 0:
-                g.move()
+            if  self.state == 0:
+                self.state = g.move()
+                if self.state == 2:
+                    self.win_screen = gen_text(*self.screen.get_size(), "YAY, you win",
+                                               ("Press F5 to restart", 
+                                                f"Your score is {self.game.t}"))
             #display
-            self.screen.blit(g.screen, (0,0))
+            if self.state in (0,1):
+                self.screen.blit(g.screen, (0,0))
+            elif self.state == 2:
+                self.screen.blit(self.win_screen, (0,0))
+            elif self.state == 3:
+                self.screen.blit(self.lose_screen1, (0,0))
+            elif self.state == 4:
+                self.screen.blit(self.lose_screen2, (0,0))
             pg.display.flip()
             clock.tick(FRAMERATE)
             keys = pg.key.get_pressed()
-            if keys[KEY_ACC] or keys[KEY_ACC2]:
-                g.acc()
-            if keys[KEY_DEC] or keys[KEY_DEC2]:
-                g.dec()
-            if keys[KEY_LEFT] or keys[KEY_LEFT2]:
-                g.turn()
-            if keys[KEY_RIGHT] or keys[KEY_RIGHT2]:
-                g.turn(1)
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     running = False
@@ -181,6 +206,7 @@ class Main:
                     break
                 elif event.type==pg.KEYDOWN:
                     if event.key == KEY_RESTART:
+                        self.state = 0
                         g.reset()
                     elif event.key == KEY_PAUSE:
                         g.pause()
@@ -202,17 +228,28 @@ class Main:
                             f3 = False
                             g.show_info = not g.show_info
                 elif event.type == pg.VIDEORESIZE:
+                    self.resize(event.w, event.h)
                     screen = pg.display.set_mode((event.w, event.h),
                                                     pg.RESIZABLE)
-                    W=screen.get_width()//2
-                    H=screen.get_height()//2
-                    g.resize(W, H)
+                    g.resize(*screen.get_size())
             if running:
                 g.show()
 
+    def resize(self, w, h):
+        self.screen = pg.display.set_mode((w,h), pg.RESIZABLE)
+        self.game.resize(w,h)
+        self.win_screen = gen_text(w, h, "YAY, you win",
+                                   ("Press F5 to restart", f"Your score is {self.game.t}"))
+        self.lose_screen1 = gen_text(w, h, "Oops, you burned to a crisp",
+                                     ("Press F5 to restart",))
+        self.lose_screen2 = gen_text(w, h, "Oops, you got spaghettified",
+                                     ("Press F5 to restart",))
+
 
 class Space:
-    def __init__(self, seed, safe={}):
+    def __init__(self, seed, safe=None):
+        if safe is None:
+            safe = {}
         self.seed = seed
         random.seed(self.seed)
         self.safe = safe
@@ -240,9 +277,8 @@ class Matrix22:
 
 
 class Game:
-    def __init__(self, s):
-        self.screen = s
-        self.game = pg.Surface(s.get_size())
+    def __init__(self, w, h):
+        self.screen = pg.Surface((w,h))
         self.show_info = False
         self.show_line = False
         self.show_menu = False
@@ -267,10 +303,10 @@ class Game:
         self.omega = 0
         self.t = 0
         pg.mouse.set_visible(False)
-        self.state = 0 # 0:normal, 1:pause, 2:win, 3:fall to star, 4: black hole
+        self.state = 0 
 
     def resize(self, w, h):
-        self.game = pg.Surface((w,h))
+        self.screen = pg.Surface((w,h))
 
     def pause(self):
         if self.state==0:
@@ -307,6 +343,7 @@ class Game:
             self.theta += ANGLAR_VEL*TIMEPERFRAME*mul
 
     def move(self):
+        self.check_keys()
         if self.state != 0:return
         self.t += 1
         vabs = sqrt(self.v[0]**2+self.v[1]**2)
@@ -321,6 +358,7 @@ class Game:
         self.pos[1]+=self.v[1]*TIMEPERFRAME/2
         if TURN_PHYSIC:
             self.theta += self.omega*TIMEPERFRAME
+        return self.state
 
     def fall(self):
         if self.state != 0:return
@@ -477,12 +515,6 @@ class Game:
             print(["Normal", "Paused", "Win", "Lose1", "Lose2"][self.state])
             print(self.pos, self.v, self.theta, self.omega)
         pg.mouse.set_visible(True)
-        if self.state == 2:
-            self.win()
-        elif self.state == 3:
-            self.lose("Oops, you burned to a crisp")
-        elif self.state == 4:
-            self.lose("Oops, you got spaghettified")
 
     def display_info(self):
         s = self.screen
@@ -505,36 +537,6 @@ class Game:
         s.blit(f5, (w-f5.get_width(), h))
         h += f5.get_height()
 
-    def lose(self, msg):
-        s = self.screen
-        w = s.get_width()
-        h = s.get_height()
-        s.fill("#ffffff")
-        my_font1 = pg.font.SysFont("Calibri",50)
-        my_font2 = pg.font.SysFont("Calibri",15)
-        f1=my_font1.render(msg, False, "#000000")
-        f2=my_font2.render("Press F5 to restart", False, "#000000")
-        s.blit(f1,(w/2-f1.get_width()/2,h/2-f1.get_height()/2))
-        s.blit(f2,(w/2-f2.get_width()/2,h/2+f1.get_height()/2))
-
-    def win(self):
-        if self.state == 1:return
-        if testing:
-            self.state = 0
-            return
-        s = self.screen
-        w = s.get_width()
-        h = s.get_height()
-        s.fill("#ffffff")
-        my_font1 = pg.font.SysFont("Calibri",50)
-        my_font2 = pg.font.SysFont("Calibri",15)
-        f1=my_font1.render("YAY, you win", False, "#000000")
-        f2=my_font2.render(f"Your score is {self.t}", False, "#000000")
-        f3=my_font2.render("Press F5 to restart", False, "#000000")
-        s.blit(f1,(w/2-f1.get_width()/2,h/2-f1.get_height()/2))
-        s.blit(f2,(w/2-f2.get_width()/2,h/2+f1.get_height()/2))
-        s.blit(f3,(w/2-f3.get_width()/2,h/2+f1.get_height()/2+f2.get_height()))
-
     def toggle_menu(self):
         if self.show_menu:
             self.show_menu = False
@@ -547,7 +549,6 @@ class Game:
         cover.set_alpha(127)
         self.screen.blit(cover, (0,0))
 
-    
     def to_screen(self, x, y):
         # covert position relative to ship to screen pos
         # input cord system: x = distance in front of ship, y= left of ship
@@ -561,6 +562,19 @@ class Game:
         w = self.screen.get_width()
         h = self.screen.get_height()
         return h*ROCKET_POS - y, w/2 -x
+
+    def check_keys(self):
+        keys = pg.key.get_pressed()
+        if keys[KEY_ACC] or keys[KEY_ACC2]:
+            self.acc()
+        if keys[KEY_DEC] or keys[KEY_DEC2]:
+            self.dec()
+        if keys[KEY_LEFT] or keys[KEY_LEFT2]:
+            self.turn()
+        if keys[KEY_RIGHT] or keys[KEY_RIGHT2]:
+            self.turn(1)
+
+
 
 if __name__ == "__main__":
     m = Main()
