@@ -72,7 +72,7 @@ INIT_V = [0,0]
 GRAVITY_RANGE = 1024
 
 # planet: (x, y, m, r, is_black_hole)
-size = [640,480]
+INIT_SIZE = [640,480]
 FRAMERATE= 40
 
 TIMEPERFRAME = 1/FRAMERATE
@@ -104,31 +104,10 @@ def map1(x, y):
         return base+md-x
     return base+3*md+x
 
-
-# Add two velocity with relativity
-def add_v(v1, v2):
-    pass
-
-screen = pg.display.set_mode(size,pg.RESIZABLE)
-pg.display.set_caption("Game")
-
-
-def to_screen(x, y):
-    # covert position relative to ship to screen pos
-    # input cord system: x = distance in front of ship, y= left of ship
-    w = screen.get_width()
-    h = screen.get_height()
-    return w/2 - y, h*ROCKET_POS - x
-
-def from_screen(x, y):
-    # covert position on screen to pos
-    # input cord system: x = distance in front of ship, y= left of ship
-    w = screen.get_width()
-    h = screen.get_height()
-    return h*ROCKET_POS - y, w/2 -x
-
-def gen(x, y, clear_area={}):
+def gen(x, y, clear_area=None):
     planet=[]
+    if clear_area is None:
+        clear_area = {}
     # print("generate chunk",x,y)
     for it2 in range(binomial(0.5,2*PLANET_CNT)):
         px = CHUNKSIZE*(x+random.random())
@@ -155,6 +134,83 @@ def mag(a):
         l+=i**2
     return sqrt(l)
 
+def translate(v):
+    # take in a vector v
+    # return A and A^-1
+    # AX = position in a coordinate system where x point in v
+    # in other word, Av = (|v|,0), |A| = 1
+    x,y = v
+    x /= mag(v)
+    y/= mag(v)
+    Ainv = Matrix22(x,-y,y,x)
+    A = Matrix22(x,y,-y,x)
+    return A,Ainv
+
+class Main:
+    def __init__(self):
+        self.screen = pg.display.set_mode(INIT_SIZE,pg.RESIZABLE)
+        pg.display.set_caption("Game")
+        self.game = Game(pg.Surface(INIT_SIZE))
+    
+    def mainloop(self):
+        clock = pg.time.Clock()
+        running = True
+        f3 = False
+        g = self.game
+        while running:
+            #sim stuff
+            if  g.state == 0:
+                g.move()
+            #display
+            self.screen.blit(g.screen, (0,0))
+            pg.display.flip()
+            clock.tick(FRAMERATE)
+            keys = pg.key.get_pressed()
+            if keys[KEY_ACC] or keys[KEY_ACC2]:
+                g.acc()
+            if keys[KEY_DEC] or keys[KEY_DEC2]:
+                g.dec()
+            if keys[KEY_LEFT] or keys[KEY_LEFT2]:
+                g.turn()
+            if keys[KEY_RIGHT] or keys[KEY_RIGHT2]:
+                g.turn(1)
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    running = False
+                    pg.quit()
+                    break
+                elif event.type==pg.KEYDOWN:
+                    if event.key == KEY_RESTART:
+                        g.reset()
+                    elif event.key == KEY_PAUSE:
+                        g.pause()
+                    elif event.key == pg.K_F4:
+                        if keys[pg.K_F3]:
+                            testing = not testing
+                            f3 = False
+                    elif event.key == pg.K_F3:
+                        f3 = True
+                    elif event.key == pg.K_b:
+                        if keys[pg.K_F3]:
+                            f3 = False
+                            g.show_line = not g.show_line
+                    elif event.key == pg.K_ESCAPE:
+                        g.toggle_menu()
+                elif event.type == pg.KEYUP:
+                    if event.key == pg.K_F3:
+                        if f3:
+                            f3 = False
+                            g.show_info = not g.show_info
+                elif event.type == pg.VIDEORESIZE:
+                    screen = pg.display.set_mode((event.w, event.h),
+                                                    pg.RESIZABLE)
+                    W=screen.get_width()//2
+                    H=screen.get_height()//2
+                    g.resize(W, H)
+            if running:
+                g.show()
+
+
 class Space:
     def __init__(self, seed, safe={}):
         self.seed = seed
@@ -169,7 +225,7 @@ class Space:
                     self.chunks[(x,y)] = gen(x,y,self.safe)
                 for p in self.chunks[(x,y)]:
                     yield p
-    
+
 
 class Matrix22:
     def __init__(self,r1c1,r1c2,r2c1,r2c2):
@@ -182,21 +238,11 @@ class Matrix22:
         # right-mul by a column vector
         return (self.a11*b1 + self.a12*b2, self.a21*b1 + self.a22*b2)
 
-def translate(v):
-    # take in a vector v
-    # return A and A^-1
-    # AX = position in a coordinate system where x point in v
-    # in other word, Av = (|v|,0), |A| = 1
-    x,y = v
-    x /= mag(v)
-    y/= mag(v)
-    Ainv = Matrix22(x,-y,y,x)
-    A = Matrix22(x,y,-y,x)
-    return A,Ainv
+
 class Game:
     def __init__(self, s):
         self.screen = s
-        self.game = pg.Surface(screen.get_size())
+        self.game = pg.Surface(s.get_size())
         self.show_info = False
         self.show_line = False
         self.show_menu = False
@@ -317,11 +363,11 @@ class Game:
             self.draw_game()
         if self.show_menu:
             self.draw_menu()
-        pg.display.flip()
 
     def draw_game(self):
-        w = self.screen.get_width()
-        h = self.screen.get_height()
+        s = self.screen
+        w = s.get_width()
+        h = s.get_height()
         # translate matrix for facing direction
         Td, Td1 = translate((cos(self.theta), sin(self.theta)))
         # velocity
@@ -342,7 +388,8 @@ class Game:
         b = 1e9
         r = -1e9
         t = -1e9
-        corners = [from_screen(0,0), from_screen(w,0), from_screen(w,h), from_screen(0,h)]
+        corners = [self.from_screen(0,0), self.from_screen(w,0),
+                   self.from_screen(w,h), self.from_screen(0,h)]
         for i in range(4):
             tx, ty = T1.mul(*corners[i])
             tx += self.pos[0]
@@ -359,34 +406,34 @@ class Game:
         t += 2
         l -= 1
         b -= 1
-        self.screen.fill("#ffffff")
+        s.fill("#ffffff")
         for px in range(l*CHUNKSIZE, r*CHUNKSIZE, CHUNKSIZE):
             for py in range(b*CHUNKSIZE, t*CHUNKSIZE, CHUNKSIZE):
-                px1, py1 = to_screen(*T.mul(px-self.pos[0],py-self.pos[1]))
-                px2, py2 = to_screen(*T.mul(px-self.pos[0],py+CHUNKSIZE-self.pos[1]))
-                px3, py3 = to_screen(*T.mul(px+CHUNKSIZE-self.pos[0],py+CHUNKSIZE-self.pos[1]))
-                px4, py4 = to_screen(*T.mul(px+CHUNKSIZE-self.pos[0],py-self.pos[1]))
+                px1, py1 = self.to_screen(*T.mul(px-self.pos[0],py-self.pos[1]))
+                px2, py2 = self.to_screen(*T.mul(px-self.pos[0],py+CHUNKSIZE-self.pos[1]))
+                px3, py3 = self.to_screen(*T.mul(px+CHUNKSIZE-self.pos[0],py+CHUNKSIZE-self.pos[1]))
+                px4, py4 = self.to_screen(*T.mul(px+CHUNKSIZE-self.pos[0],py-self.pos[1]))
                 # print(px1,py1, px2,py2)
-                pg.draw.polygon(self.screen, (0, 0, 0), ((px1, py1), (px2, py2), (px3, py3), (px4, py4)))
+                pg.draw.polygon(s, (0, 0, 0), ((px1, py1), (px2, py2), (px3, py3), (px4, py4)))
         for px in range(l*CHUNKSIZE, r*CHUNKSIZE, GRID_SIZE):
             for py in range(b*CHUNKSIZE, t*CHUNKSIZE, GRID_SIZE):
-                px1, py1 = to_screen(*T.mul(px-self.pos[0],py-self.pos[1]))
-                px2, py2 = to_screen(*T.mul(px-self.pos[0],py+GRID_SIZE-self.pos[1]))
-                px3, py3 = to_screen(*T.mul(px+GRID_SIZE-self.pos[0],py+GRID_SIZE-self.pos[1]))
-                px4, py4 = to_screen(*T.mul(px+GRID_SIZE-self.pos[0],py-self.pos[1]))
+                px1, py1 = self.to_screen(*T.mul(px-self.pos[0],py-self.pos[1]))
+                px2, py2 = self.to_screen(*T.mul(px-self.pos[0],py+GRID_SIZE-self.pos[1]))
+                px3, py3 = self.to_screen(*T.mul(px+GRID_SIZE-self.pos[0],py+GRID_SIZE-self.pos[1]))
+                px4, py4 = self.to_screen(*T.mul(px+GRID_SIZE-self.pos[0],py-self.pos[1]))
                 # print(px1,py1, px2,py2)
-                pg.draw.polygon(self.screen, "#7f7f7f", ((px1, py1), (px2, py2), (px3, py3), (px4, py4)), 1)
+                pg.draw.polygon(s, "#7f7f7f", ((px1, py1), (px2, py2), (px3, py3), (px4, py4)), 1)
         # Destination
         if HAS_DEST:
-            desx,desy = to_screen(*T.mul(self.dest[0]-self.pos[0],self.dest[1]-self.pos[1]))
-            pg.draw.circle(screen, "#0000ff", (desx,desy), DEST_RADIUS)
+            desx,desy = self.to_screen(*T.mul(self.dest[0]-self.pos[0],self.dest[1]-self.pos[1]))
+            pg.draw.circle(s, "#0000ff", (desx,desy), DEST_RADIUS)
         # Stars
         for px,py,pm,pr,pb,pc in self.space.range(l,r,t,b):
-            px,py = to_screen(*T.mul(px-self.pos[0],py-self.pos[1]))
+            px,py = self.to_screen(*T.mul(px-self.pos[0],py-self.pos[1]))
             if pb:
-                pg.draw.circle(screen, "#e34402", (px,py), pr, 1)
+                pg.draw.circle(s, "#e34402", (px,py), pr, 1)
             else:
-                pg.draw.circle(screen, pc, (px,py), pr)
+                pg.draw.circle(s, pc, (px,py), pr)
         # Dest indicator on the edge
         if HAS_DEST:
             ptx, pty = T.mul(self.dest[0]-self.pos[0],self.dest[1]-self.pos[1])
@@ -400,14 +447,14 @@ class Game:
             if (pty<0):
                 mul = min(mul, -w/2/pty)
             if (mul<1):
-                pg.draw.circle(self.screen, "#0000ff", to_screen(ptx*mul,pty*mul), 9)
+                pg.draw.circle(s, "#0000ff", self.to_screen(ptx*mul,pty*mul), 9)
             # line to dest
             if self.show_line:
-                pg.draw.line(self.screen, "#ff0000", to_screen(0,0), (desx,desy))
+                pg.draw.line(s, "#ff0000", self.to_screen(0,0), (desx,desy))
         triangle = ((-h*ROCKET_HEIGHT/3, -h*ROCKET_WIDTH), (-h*ROCKET_HEIGHT/3, h*ROCKET_WIDTH),
         (h*ROCKET_HEIGHT*2/3, 0))
-        triangle = list(map(lambda a:to_screen(*T.mul(*Td1.mul(*a))), triangle))
-        pg.draw.polygon(self.screen, ROCKET_COLOR, triangle)
+        triangle = list(map(lambda a:self.to_screen(*T.mul(*Td1.mul(*a))), triangle))
+        pg.draw.polygon(s, ROCKET_COLOR, triangle)
         # Velocity
         if self.show_line:
             px, py = self.v
@@ -417,8 +464,8 @@ class Game:
                 py /= speed
             px *= mul
             py *= mul
-            px,py = to_screen(*T.mul(px,py))
-            pg.draw.line(self.screen, "#3fff00", to_screen(0,0), (px, py), 2)
+            px,py = self.to_screen(*T.mul(px,py))
+            pg.draw.line(s, "#3fff00", self.to_screen(0,0), (px, py), 2)
         if self.show_info:
             self.display_info()
     
@@ -495,64 +542,26 @@ class Game:
             self.show_menu =True
 
     def draw_menu(self):
-        self.screen.fill((127,127,127,127))
+        cover = pg.Surface(self.screen.get_size())
+        cover.fill((127,127,127))
+        cover.set_alpha(127)
+        self.screen.blit(cover, (0,0))
 
+    
+    def to_screen(self, x, y):
+        # covert position relative to ship to screen pos
+        # input cord system: x = distance in front of ship, y= left of ship
+        w = self.screen.get_width()
+        h = self.screen.get_height()
+        return w/2 - y, h*ROCKET_POS - x
 
-# screen.fill("#ffffff")
-pg.display.flip()
+    def from_screen(self, x, y):
+        # covert position on screen to pos
+        # input cord system: x = distance in front of ship, y= left of ship
+        w = self.screen.get_width()
+        h = self.screen.get_height()
+        return h*ROCKET_POS - y, w/2 -x
 
-g=Game(screen)
-clock = pg.time.Clock()
-running = True
-f3 = False
-while running:
-    #sim stuff
-    if  g.state == 0:
-        g.move()
-    #display
-    pg.display.flip()
-    clock.tick(FRAMERATE)
-    keys = pg.key.get_pressed()
-    if keys[KEY_ACC] or keys[KEY_ACC2]:
-        g.acc()
-    if keys[KEY_DEC] or keys[KEY_DEC2]:
-        g.dec()
-    if keys[KEY_LEFT] or keys[KEY_LEFT2]:
-        g.turn()
-    if keys[KEY_RIGHT] or keys[KEY_RIGHT2]:
-        g.turn(1)
-    for event in pg.event.get():
-        if event.type == pg.QUIT:
-            running = False
-            pg.quit()
-            break
-        elif event.type==pg.KEYDOWN:
-            if event.key == KEY_RESTART:
-                g.reset()
-            elif event.key == KEY_PAUSE:
-                g.pause()
-            elif event.key == pg.K_F4:
-                if keys[pg.K_F3]:
-                    testing = not testing
-                    f3 = False
-            elif event.key == pg.K_F3:
-                f3 = True
-            elif event.key == pg.K_b:
-                if keys[pg.K_F3]:
-                    f3 = False
-                    g.show_line = not g.show_line
-            elif event.key == pg.K_ESCAPE:
-                g.toggle_menu()
-        elif event.type == pg.KEYUP:
-            if event.key == pg.K_F3:
-                if f3:
-                    f3 = False
-                    g.show_info = not g.show_info
-        elif event.type == pg.VIDEORESIZE:
-            screen = pg.display.set_mode((event.w, event.h),
-                                              pg.RESIZABLE)
-            W=screen.get_width()//2
-            H=screen.get_height()//2
-            g.resize(W, H)
-    if running:
-        g.show()
+if __name__ == "__main__":
+    m = Main()
+    m.mainloop()
