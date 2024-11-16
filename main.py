@@ -1,7 +1,9 @@
-# For Martino
-import pygame as pg
-from math import *
+"""
+For Martino
+"""
+from math import dist, sqrt, sin, cos, pi
 import random
+import pygame as pg
 pg.init()
 
 
@@ -86,16 +88,17 @@ SEED = 1598438236
 # very easy seed, just press w
 SEED = -501839539
 
-testing = False
 
 def binomial(p, n):
+    """binomial distibution"""
     c=0
-    for it3 in range(n):
+    for _ in range(n):
         if random.random()<p:
             c+=1
     return c
 
 def map1(x, y):
+    """bijective mapping from Z^2 to N"""
     if x==0 and y==0:
         return 0
     md = abs(x)+abs(y)
@@ -105,11 +108,14 @@ def map1(x, y):
     return base+3*md+x
 
 def gen(x, y, clear_area=None):
+    """generate random stars and black hole
+    clear_area: dictionary with key:(x,y) and value:int
+    does not generate anything less than value away from key"""
     planet=[]
     if clear_area is None:
         clear_area = {}
     # print("generate chunk",x,y)
-    for it2 in range(binomial(0.5,2*PLANET_CNT)):
+    for _ in range(binomial(0.5,2*PLANET_CNT)):
         px = CHUNKSIZE*(x+random.random())
         py = CHUNKSIZE*(y+random.random())
         for p in clear_area:
@@ -128,25 +134,28 @@ def gen(x, y, clear_area=None):
     return planet
 
 def mag(a):
-    # return length of vector
+    "return length of (mathematics)vector"
     l=0
     for i in a:
         l+=i**2
     return sqrt(l)
 
 def translate(v):
-    # take in a vector v
-    # return A and A^-1
-    # AX = position in a coordinate system where x point in v
-    # in other word, Av = (|v|,0), |A| = 1
+    """
+    take in a vector v
+    return A and A^-1
+    AX = position in a coordinate system where x point in v
+    in other word, Av = (|v|,0), |A| = 1
+    """
     x,y = v
     x /= mag(v)
     y/= mag(v)
-    Ainv = Matrix22(x,-y,y,x)
-    A = Matrix22(x,y,-y,x)
-    return A,Ainv
+    mat_inv = Matrix22(x,-y,y,x)
+    mat = Matrix22(x,y,-y,x)
+    return mat,mat_inv
 
 def gen_text(w, h, title, msgs=None):
+    """Make a Surface with title and msg"""
     if msgs is None:
         msgs = []
     s = pg.Surface((w, h))
@@ -163,6 +172,7 @@ def gen_text(w, h, title, msgs=None):
     return s
 
 class Main:
+    """Main"""
     def __init__(self):
         self.screen = pg.display.set_mode(INIT_SIZE, pg.RESIZABLE)
         pg.display.set_caption("Game")
@@ -173,8 +183,9 @@ class Main:
         self.resize(*INIT_SIZE)
         # 0:normal, 1:pause, 2:win, 3:fall to star, 4: black hole
         self.state = 0
-    
+
     def mainloop(self):
+        """main loop"""
         clock = pg.time.Clock()
         running = True
         f3 = False
@@ -185,7 +196,7 @@ class Main:
                 self.state = g.move()
                 if self.state == 2:
                     self.win_screen = gen_text(*self.screen.get_size(), "YAY, you win",
-                                               ("Press F5 to restart", 
+                                               ("Press F5 to restart",
                                                 f"Your score is {self.game.t}"))
             #display
             if self.state in (0,1):
@@ -212,7 +223,7 @@ class Main:
                         g.pause()
                     elif event.key == pg.K_F4:
                         if keys[pg.K_F3]:
-                            testing = not testing
+                            g.testing = not g.testing
                             f3 = False
                     elif event.key == pg.K_F3:
                         f3 = True
@@ -221,7 +232,7 @@ class Main:
                             f3 = False
                             g.show_line = not g.show_line
                     elif event.key == pg.K_ESCAPE:
-                        g.toggle_menu()
+                        pass
                 elif event.type == pg.KEYUP:
                     if event.key == pg.K_F3:
                         if f3:
@@ -233,9 +244,10 @@ class Main:
                                                     pg.RESIZABLE)
                     g.resize(*screen.get_size())
             if running:
-                g.show()
+                g.draw_game()
 
     def resize(self, w, h):
+        """get called when screen resize"""
         self.screen = pg.display.set_mode((w,h), pg.RESIZABLE)
         self.game.resize(w,h)
         self.win_screen = gen_text(w, h, "YAY, you win",
@@ -247,6 +259,7 @@ class Main:
 
 
 class Space:
+    """just a class for storing stars"""
     def __init__(self, seed, safe=None):
         if safe is None:
             safe = {}
@@ -255,6 +268,7 @@ class Space:
         self.safe = safe
         self.chunks={(0,0):gen(0,0, self.safe)}
     def range(self, l, r, t, b):
+        """return all stars in the range (l,r,t,b)(chunks, not coord) as iterable"""
         for x in range(l,r):
             for y in range(b,t):
                 if (x,y) not in self.chunks:
@@ -265,26 +279,31 @@ class Space:
 
 
 class Matrix22:
+    """2 by 2 Matrix"""
     def __init__(self,r1c1,r1c2,r2c1,r2c2):
         self.a11=r1c1
         self.a12=r1c2
         self.a21=r2c1
         self.a22=r2c2
-    
+
     def mul(self, b1, b2):
-        # right-mul by a column vector
+        """right-mul by a column vector (MX)"""
         return (self.a11*b1 + self.a12*b2, self.a21*b1 + self.a22*b2)
 
 
 class Game:
+    """Responsible for the main gameplay"""
     def __init__(self, w, h):
         self.screen = pg.Surface((w,h))
         self.show_info = False
         self.show_line = False
         self.show_menu = False
+        self.testing = False
+        self.state = 0
         self.reset()
 
     def reset(self):
+        """restart the game"""
         if RANDOM_SEED:
             self.seed = random.randint(-2**31, 2**31-1)
         else:
@@ -303,12 +322,14 @@ class Game:
         self.omega = 0
         self.t = 0
         pg.mouse.set_visible(False)
-        self.state = 0 
+        self.state = 0
 
     def resize(self, w, h):
+        """resize self"""
         self.screen = pg.Surface((w,h))
 
     def pause(self):
+        """pause/unpause"""
         if self.state==0:
             self.state = 1
             print("pos: ", self.pos)
@@ -318,21 +339,25 @@ class Game:
         elif self.state == 1:
             self.state = 0
             pg.mouse.set_visible(False)
-    
+
     def acc(self):
-        # accelerate
-        if self.state != 0:return
+        """accelerate"""
+        if self.state != 0:
+            return
         self.v[0] += ACCELARATION*cos(self.theta)*TIMEPERFRAME
         self.v[1] += ACCELARATION*sin(self.theta)*TIMEPERFRAME
-    
+
     def dec(self):
-        # decelerate
-        if self.state != 0:return
+        """decelerate"""
+        if self.state != 0:
+            return
         self.v[0] -= ACCELARATION*cos(self.theta)*TIMEPERFRAME
         self.v[1] -= ACCELARATION*sin(self.theta)*TIMEPERFRAME
-    
+
     def turn(self, clockwise=False):
-        if self.state != 0:return
+        """turn"""
+        if self.state != 0:
+            return
         if clockwise:
             mul=-1
         else:
@@ -343,8 +368,12 @@ class Game:
             self.theta += ANGLAR_VEL*TIMEPERFRAME*mul
 
     def move(self):
+        """move according to velcity [and angular velocity]
+        also call self.fall()
+        return new state"""
         self.check_keys()
-        if self.state != 0:return
+        if self.state != 0:
+            return
         self.t += 1
         vabs = sqrt(self.v[0]**2+self.v[1]**2)
         if vabs>LIGHT:
@@ -361,7 +390,9 @@ class Game:
         return self.state
 
     def fall(self):
-        if self.state != 0:return
+        """handle gravity stuff"""
+        if self.state != 0:
+            return
         l=int((self.pos[0]-GRAVITY_RANGE)/CHUNKSIZE)
         r=int((self.pos[0]+GRAVITY_RANGE)/CHUNKSIZE)
         t=int((self.pos[1]+GRAVITY_RANGE)/CHUNKSIZE)
@@ -372,7 +403,6 @@ class Game:
             di = dist(self.pos, self.dest)
             if di < DEST_RADIUS:
                 self.state=2
-                self.over(1)
                 return
             self.v[0]+=dx*G*DEST_MASS/di**3
             self.v[1]+=dy*G*DEST_MASS/di**3
@@ -380,48 +410,39 @@ class Game:
             dx = p[0]-self.pos[0]
             dy = p[1]-self.pos[1]
             di = sqrt(dx**2+dy**2)
-            if not testing:
+            if not self.testing:
                 if p[4]:
-                    if (di<p[3]*BLACKHOLE_DEATH_RATIO):
+                    if di<p[3]*BLACKHOLE_DEATH_RATIO:
                         self.state = 4
                         break
                 else:
-                    if (di<p[3]):
+                    if di<p[3]:
                         self.state = 3
                         break
             self.v[0]+=dx*G*p[2]/di**3
             self.v[1]+=dy*G*p[2]/di**3
-        if self.state not in (0,1):
-            self.over(1)
-    
-    def show(self):
-        if self.state not in (0,1):
-            self.over()
-        else:
-            self.draw_game()
-        if self.show_menu:
-            self.draw_menu()
 
     def draw_game(self):
+        """draw just about everything"""
         s = self.screen
         w = s.get_width()
         h = s.get_height()
         # translate matrix for facing direction
-        Td, Td1 = translate((cos(self.theta), sin(self.theta)))
+        mat_d, mat_d1 = translate((cos(self.theta), sin(self.theta)))
         # velocity
         speed = mag(self.v)
         if speed==0:
-            Tv, Tv1 = translate((1,0))
+            mat_v, mat_v1 = translate((1,0))
         else:
-            Tv, Tv1 = translate((self.v[0]/speed, self.v[1]/speed))
+            mat_v, mat_v1 = translate((self.v[0]/speed, self.v[1]/speed))
         # up
-        Tu, Tu1 = translate((0, 1))
+        mat_u, mat_u1 = translate((0, 1))
         if ORENTATION == "Facing":
-            T, T1 = Td, Td1
+            mat, mat1 = mat_d, mat_d1
         elif ORENTATION =="Motion":
-            T, T1 = Tv, Tv1
+            mat, mat1 = mat_v, mat_v1
         else:
-            T, T1 = Tu, Tu1
+            mat, mat1 = mat_u, mat_u1
         l = 1e9
         b = 1e9
         r = -1e9
@@ -429,7 +450,7 @@ class Game:
         corners = [self.from_screen(0,0), self.from_screen(w,0),
                    self.from_screen(w,h), self.from_screen(0,h)]
         for i in range(4):
-            tx, ty = T1.mul(*corners[i])
+            tx, ty = mat1.mul(*corners[i])
             tx += self.pos[0]
             ty += self.pos[1]
             r = max(r, tx)
@@ -447,51 +468,53 @@ class Game:
         s.fill("#ffffff")
         for px in range(l*CHUNKSIZE, r*CHUNKSIZE, CHUNKSIZE):
             for py in range(b*CHUNKSIZE, t*CHUNKSIZE, CHUNKSIZE):
-                px1, py1 = self.to_screen(*T.mul(px-self.pos[0],py-self.pos[1]))
-                px2, py2 = self.to_screen(*T.mul(px-self.pos[0],py+CHUNKSIZE-self.pos[1]))
-                px3, py3 = self.to_screen(*T.mul(px+CHUNKSIZE-self.pos[0],py+CHUNKSIZE-self.pos[1]))
-                px4, py4 = self.to_screen(*T.mul(px+CHUNKSIZE-self.pos[0],py-self.pos[1]))
+                px1, py1 = self.to_screen(*mat.mul(px-self.pos[0],py-self.pos[1]))
+                px2, py2 = self.to_screen(*mat.mul(px-self.pos[0],py+CHUNKSIZE-self.pos[1]))
+                px3, py3 = self.to_screen(*mat.mul(px+CHUNKSIZE-self.pos[0],
+                                                   py+CHUNKSIZE-self.pos[1]))
+                px4, py4 = self.to_screen(*mat.mul(px+CHUNKSIZE-self.pos[0],py-self.pos[1]))
                 # print(px1,py1, px2,py2)
                 pg.draw.polygon(s, (0, 0, 0), ((px1, py1), (px2, py2), (px3, py3), (px4, py4)))
         for px in range(l*CHUNKSIZE, r*CHUNKSIZE, GRID_SIZE):
             for py in range(b*CHUNKSIZE, t*CHUNKSIZE, GRID_SIZE):
-                px1, py1 = self.to_screen(*T.mul(px-self.pos[0],py-self.pos[1]))
-                px2, py2 = self.to_screen(*T.mul(px-self.pos[0],py+GRID_SIZE-self.pos[1]))
-                px3, py3 = self.to_screen(*T.mul(px+GRID_SIZE-self.pos[0],py+GRID_SIZE-self.pos[1]))
-                px4, py4 = self.to_screen(*T.mul(px+GRID_SIZE-self.pos[0],py-self.pos[1]))
+                px1, py1 = self.to_screen(*mat.mul(px-self.pos[0],py-self.pos[1]))
+                px2, py2 = self.to_screen(*mat.mul(px-self.pos[0],py+GRID_SIZE-self.pos[1]))
+                px3, py3 = self.to_screen(*mat.mul(px+GRID_SIZE-self.pos[0],
+                                                   py+GRID_SIZE-self.pos[1]))
+                px4, py4 = self.to_screen(*mat.mul(px+GRID_SIZE-self.pos[0],py-self.pos[1]))
                 # print(px1,py1, px2,py2)
                 pg.draw.polygon(s, "#7f7f7f", ((px1, py1), (px2, py2), (px3, py3), (px4, py4)), 1)
         # Destination
         if HAS_DEST:
-            desx,desy = self.to_screen(*T.mul(self.dest[0]-self.pos[0],self.dest[1]-self.pos[1]))
+            desx,desy = self.to_screen(*mat.mul(self.dest[0]-self.pos[0],self.dest[1]-self.pos[1]))
             pg.draw.circle(s, "#0000ff", (desx,desy), DEST_RADIUS)
         # Stars
-        for px,py,pm,pr,pb,pc in self.space.range(l,r,t,b):
-            px,py = self.to_screen(*T.mul(px-self.pos[0],py-self.pos[1]))
+        for px,py,_,pr,pb,pc in self.space.range(l,r,t,b):
+            px,py = self.to_screen(*mat.mul(px-self.pos[0],py-self.pos[1]))
             if pb:
                 pg.draw.circle(s, "#e34402", (px,py), pr, 1)
             else:
                 pg.draw.circle(s, pc, (px,py), pr)
         # Dest indicator on the edge
         if HAS_DEST:
-            ptx, pty = T.mul(self.dest[0]-self.pos[0],self.dest[1]-self.pos[1])
+            ptx, pty = mat.mul(self.dest[0]-self.pos[0],self.dest[1]-self.pos[1])
             mul = 1e9
-            if (ptx>0):
+            if ptx>0:
                 mul = min(mul, h*ROCKET_POS/ptx)
-            if (ptx<0):
+            if ptx<0:
                 mul = min(mul, h*(ROCKET_POS-1)/ptx)
-            if (pty>0):
+            if pty>0:
                 mul = min(mul, w/2/pty)
-            if (pty<0):
+            if pty<0:
                 mul = min(mul, -w/2/pty)
-            if (mul<1):
+            if mul<1:
                 pg.draw.circle(s, "#0000ff", self.to_screen(ptx*mul,pty*mul), 9)
             # line to dest
             if self.show_line:
                 pg.draw.line(s, "#ff0000", self.to_screen(0,0), (desx,desy))
         triangle = ((-h*ROCKET_HEIGHT/3, -h*ROCKET_WIDTH), (-h*ROCKET_HEIGHT/3, h*ROCKET_WIDTH),
         (h*ROCKET_HEIGHT*2/3, 0))
-        triangle = list(map(lambda a:self.to_screen(*T.mul(*Td1.mul(*a))), triangle))
+        triangle = list(map(lambda a:self.to_screen(*mat.mul(*mat_d1.mul(*a))), triangle))
         pg.draw.polygon(s, ROCKET_COLOR, triangle)
         # Velocity
         if self.show_line:
@@ -502,21 +525,13 @@ class Game:
                 py /= speed
             px *= mul
             py *= mul
-            px,py = self.to_screen(*T.mul(px,py))
+            px,py = self.to_screen(*mat.mul(px,py))
             pg.draw.line(s, "#3fff00", self.to_screen(0,0), (px, py), 2)
         if self.show_info:
             self.display_info()
-    
-    def over(self, plog = False):
-        if testing:
-            self.state = 0
-            return
-        if plog:
-            print(["Normal", "Paused", "Win", "Lose1", "Lose2"][self.state])
-            print(self.pos, self.v, self.theta, self.omega)
-        pg.mouse.set_visible(True)
 
     def display_info(self):
+        """show F3 screen"""
         s = self.screen
         w = s.get_width()
         my_font = pg.font.SysFont("Calibri",15)
@@ -537,33 +552,22 @@ class Game:
         s.blit(f5, (w-f5.get_width(), h))
         h += f5.get_height()
 
-    def toggle_menu(self):
-        if self.show_menu:
-            self.show_menu = False
-        else:
-            self.show_menu =True
-
-    def draw_menu(self):
-        cover = pg.Surface(self.screen.get_size())
-        cover.fill((127,127,127))
-        cover.set_alpha(127)
-        self.screen.blit(cover, (0,0))
-
     def to_screen(self, x, y):
-        # covert position relative to ship to screen pos
-        # input cord system: x = distance in front of ship, y= left of ship
+        """covert position relative to ship to screen pos
+        input cord system: x = distance in front of ship, y= left of ship"""
         w = self.screen.get_width()
         h = self.screen.get_height()
         return w/2 - y, h*ROCKET_POS - x
 
     def from_screen(self, x, y):
-        # covert position on screen to pos
-        # input cord system: x = distance in front of ship, y= left of ship
+        """covert position on screen to pos
+        input cord system: x = distance in front of ship, y= left of ship"""
         w = self.screen.get_width()
         h = self.screen.get_height()
         return h*ROCKET_POS - y, w/2 -x
 
     def check_keys(self):
+        """check pressed key"""
         keys = pg.key.get_pressed()
         if keys[KEY_ACC] or keys[KEY_ACC2]:
             self.acc()
