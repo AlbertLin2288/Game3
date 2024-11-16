@@ -88,6 +88,13 @@ SEED = 1598438236
 # very easy seed, just press w
 SEED = -501839539
 
+#
+# Main.mainloop:
+# Display childern at it's discreetion
+# Tick children
+# pass down event
+#
+
 
 def binomial(p, n):
     """binomial distibution"""
@@ -171,33 +178,37 @@ def gen_text(w, h, title, msgs=None):
         h += f2.get_height()
     return s
 
+# 0:quit, 1:game, 2:lose by star, 3:black hole, 4:win, 5:menu
+
 class Main:
     """Main"""
     def __init__(self):
         self.screen = pg.display.set_mode(INIT_SIZE, pg.RESIZABLE)
         pg.display.set_caption("Game")
-        self.game = Game(*INIT_SIZE)
+        self.game = Game(self.screen)
         self.win_screen = None
         self.lose_screen1 = None
         self.lose_screen2 = None
         self.resize(*INIT_SIZE)
-        # 0:normal, 1:pause, 2:win, 3:fall to star, 4: black hole
-        self.state = 0
+        self.state = 0 # 0:game, 2:fall to star, 3:black hole, 4:win, 5:menu
 
     def mainloop(self):
         """main loop"""
-        clock = pg.time.Clock()
-        running = True
-        f3 = False
-        g = self.game
-        while running:
+        while True:
             #sim stuff
-            if  self.state == 0:
-                self.state = g.move()
-                if self.state == 2:
-                    self.win_screen = gen_text(*self.screen.get_size(), "YAY, you win",
-                                               ("Press F5 to restart",
-                                                f"Your score is {self.game.t}"))
+            if self.state == 0:
+                return_code = self.game.mainloop()
+                match return_code:
+                    case 1:
+                        return
+                    case 2:
+                        self.state = 2
+                    case 3:
+                        self.state = 3
+                    case 4:
+                        self.state = 4
+                    case 5:
+                        self.state = 5
             #display
             if self.state in (0,1):
                 self.screen.blit(g.screen, (0,0))
@@ -293,14 +304,57 @@ class Matrix22:
 
 class Game:
     """Responsible for the main gameplay"""
-    def __init__(self, w, h):
-        self.screen = pg.Surface((w,h))
+    def __init__(self, s):
+        self.screen = s
         self.show_info = False
         self.show_line = False
         self.show_menu = False
-        self.testing = False
-        self.state = 0
+        self.paused = False
+        self.invulnerable = False
         self.reset()
+
+    def mainloop(self):
+        """main loop"""
+        self.reset()
+        clock = pg.time.Clock()
+        return_code = 0 # 1:quit, 2:fall into star, 3:black hole, 4:win, 5:menu screen
+        while True:
+            clock.tick(FRAMERATE)
+            if not self.paused:
+                self.draw_game()
+                return_code = self.move()
+            if return_code != 0:
+                return return_code
+            pg.display.flip()
+            keys = pg.key.get_pressed()
+            if keys[KEY_ACC] or keys[KEY_ACC2]:
+                self.acc()
+            if keys[KEY_DEC] or keys[KEY_DEC2]:
+                self.dec()
+            if keys[KEY_LEFT] or keys[KEY_LEFT2]:
+                self.turn()
+            if keys[KEY_RIGHT] or keys[KEY_RIGHT2]:
+                self.turn(1)
+
+            for event in pg.event.get():
+                if event.type==pg.KEYDOWN:
+                    if event.key == pg.K_F3:
+                        self.show_info = not self.show_info
+                    elif event.key == pg.K_F4:
+                        if keys[pg.K_F3]:
+                            self.invulnerable = not self.invulnerable
+                    elif event.key == pg.K_b:
+                        if keys[pg.K_F3]:
+                            self.show_line = not self.show_line
+                    elif event.key == KEY_RESTART:
+                        self.reset()
+                    elif event.key == pg.K_ESCAPE:
+                        return 5
+                elif event.type == pg.QUIT:
+                    pg.quit()
+                    return 1
+                elif event.type == pg.VIDEORESIZE:
+                    self.resize(event.w, event.h)
 
     def reset(self):
         """restart the game"""
@@ -322,42 +376,36 @@ class Game:
         self.omega = 0
         self.t = 0
         pg.mouse.set_visible(False)
-        self.state = 0
+        self.paused = False
 
     def resize(self, w, h):
         """resize self"""
-        self.screen = pg.Surface((w,h))
+        self.screen = pg.display.set_mode((w,h),pg.RESIZABLE)
 
     def pause(self):
         """pause/unpause"""
-        if self.state==0:
-            self.state = 1
+        if self.paused == False:
+            self.paused = True
             print("pos: ", self.pos)
             print("v: ", self.v)
             print("theta: ", self.theta)
             pg.mouse.set_visible(True)
-        elif self.state == 1:
-            self.state = 0
+        else:
+            self.paused = False
             pg.mouse.set_visible(False)
 
     def acc(self):
         """accelerate"""
-        if self.state != 0:
-            return
         self.v[0] += ACCELARATION*cos(self.theta)*TIMEPERFRAME
         self.v[1] += ACCELARATION*sin(self.theta)*TIMEPERFRAME
 
     def dec(self):
         """decelerate"""
-        if self.state != 0:
-            return
         self.v[0] -= ACCELARATION*cos(self.theta)*TIMEPERFRAME
         self.v[1] -= ACCELARATION*sin(self.theta)*TIMEPERFRAME
 
     def turn(self, clockwise=False):
         """turn"""
-        if self.state != 0:
-            return
         if clockwise:
             mul=-1
         else:
@@ -371,9 +419,6 @@ class Game:
         """move according to velcity [and angular velocity]
         also call self.fall()
         return new state"""
-        self.check_keys()
-        if self.state != 0:
-            return
         self.t += 1
         vabs = sqrt(self.v[0]**2+self.v[1]**2)
         if vabs>LIGHT:
@@ -382,17 +427,17 @@ class Game:
             self.v[1] *= LIGHT/vabs
         self.pos[0]+=self.v[0]*TIMEPERFRAME/2
         self.pos[1]+=self.v[1]*TIMEPERFRAME/2
-        self.fall()
+        return_code = self.fall()
+        if return_code != 0:
+            return return_code
         self.pos[0]+=self.v[0]*TIMEPERFRAME/2
         self.pos[1]+=self.v[1]*TIMEPERFRAME/2
         if TURN_PHYSIC:
             self.theta += self.omega*TIMEPERFRAME
-        return self.state
+        return 0
 
     def fall(self):
         """handle gravity stuff"""
-        if self.state != 0:
-            return
         l=int((self.pos[0]-GRAVITY_RANGE)/CHUNKSIZE)
         r=int((self.pos[0]+GRAVITY_RANGE)/CHUNKSIZE)
         t=int((self.pos[1]+GRAVITY_RANGE)/CHUNKSIZE)
@@ -402,25 +447,23 @@ class Game:
             dy = self.dest[1] - self.pos[1]
             di = dist(self.pos, self.dest)
             if di < DEST_RADIUS:
-                self.state=2
-                return
+                return 4
             self.v[0]+=dx*G*DEST_MASS/di**3
             self.v[1]+=dy*G*DEST_MASS/di**3
         for p in self.space.range(l,r,t,b):
             dx = p[0]-self.pos[0]
             dy = p[1]-self.pos[1]
             di = sqrt(dx**2+dy**2)
-            if not self.testing:
+            if not self.invulnerable:
                 if p[4]:
                     if di<p[3]*BLACKHOLE_DEATH_RATIO:
-                        self.state = 4
-                        break
+                        return 3
                 else:
                     if di<p[3]:
-                        self.state = 3
-                        break
+                        return 2
             self.v[0]+=dx*G*p[2]/di**3
             self.v[1]+=dy*G*p[2]/di**3
+        return 0
 
     def draw_game(self):
         """draw just about everything"""
@@ -566,17 +609,6 @@ class Game:
         h = self.screen.get_height()
         return h*ROCKET_POS - y, w/2 -x
 
-    def check_keys(self):
-        """check pressed key"""
-        keys = pg.key.get_pressed()
-        if keys[KEY_ACC] or keys[KEY_ACC2]:
-            self.acc()
-        if keys[KEY_DEC] or keys[KEY_DEC2]:
-            self.dec()
-        if keys[KEY_LEFT] or keys[KEY_LEFT2]:
-            self.turn()
-        if keys[KEY_RIGHT] or keys[KEY_RIGHT2]:
-            self.turn(1)
 
 
 
