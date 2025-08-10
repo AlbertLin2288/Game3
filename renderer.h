@@ -1,5 +1,6 @@
 #pragma once
 
+#include <tuple>
 #include <glm/fwd.hpp>
 #include "shader.h"
 
@@ -17,6 +18,7 @@ public:
     double getTime() const;
     void fill(float r, float g, float b, float a) const;
     float get_aspect_ratio();
+    std::pair<int, int> get_size();
     static void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 private:
 };

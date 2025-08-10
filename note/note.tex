@@ -1,0 +1,94 @@
+\documentclass[a4paper, 12pt]{article}
+
+\setlength{\parskip}{1.6em}
+\setlength{\parindent}{1.25cm}
+%Border
+\usepackage[left=1in, right=1in, top=1in, bottom=1in]{geometry}
+% \usepackage{indentfirst}
+% \doublespacing
+%Packages
+\usepackage{amsmath}
+% \usepackage[dvipsnames]{xcolor}
+\usepackage{mathtools}
+% \usepackage{amsfonts}
+% \usepackage{titlesec}
+
+\newcommand{\ui}{\mathbf{i}}
+\newcommand{\uj}{\mathbf{j}}
+\newcommand{\uk}{\mathbf{k}}
+\newcommand{\quat}[4]{#1#2\ui#3\uj#4\uk}
+\newcommand{\quats}[4]{#1+#2\ui+#3\uj+#4\uk}
+
+\begin{document}
+We are going to stick to 2D, as we hadn't came up with any why to do 3D without making it hard for player to play the game from the perspective of a computer, instead of a human. We want player to be able to access all nesessary information easily, without having to rely on good control.
+
+The game is played on the surface of a sphere with radius 1. The coord stored is stored as a 3d vector, with norm 1.
+
+\clearpage
+normal distribution:
+\[\frac{1}{\sqrt{2\pi\sigma^2}}e^{-\frac{v^2}{2\sigma^2}}\]
+
+2d:
+\[(2\pi\sigma^2)^{-1}\cdot 2\pi v\cdot e^{-\frac{v^2}{2\sigma^2}}\]
+
+3d:
+\[(2\pi\sigma^2)^{-\frac{3}{2}}\cdot 4\pi v^2\cdot e^{-\frac{v^2}{2\sigma^2}}\]
+
+Expected $|v|$:
+
+1d:
+\[\sigma\sqrt{\frac{2}{\pi}}\]
+
+2d:
+\[\sigma\sqrt{\frac{\pi}{2}}\]
+
+3d:
+\[\sigma\sqrt{\frac{8}{\pi}}\]
+
+Expected $v^2$:
+
+1d:
+\[\sigma\]
+
+2d:
+\[2\sigma\]
+
+3d:
+\[3\sigma\]
+
+\clearpage
+\[p = \quats{a}{b}{c}{d}\]
+\[(\quats{a}{b}{c}{d}) * (\quat{a}{-b}{-c}{-d}) = a^2+b^2+c^2+d^2\]
+\begin{align*}
+  p^{-1}
+  & = (\quats{a}{b}{c}{d})^{-1} \\
+  & = \frac{\quat{a}{-b}{-c}{-d}}{a^2+b^2+c^2+d^2}
+\end{align*}
+
+\begin{align*}
+  pqp^-1
+  = & \frac{(\quats{a_1}{b_1}{c_1}{d_1}) \cdot (\quats{a_2}{b_2}{c_2}{d_2})}{a_1^2+b_1^2+c_1^2+d_1^2} \\
+  & \cdot \frac{(\quat{a_1}{-b_1}{-c_1}{-d_1})}{a_1^2+b_1^2+c_1^2+d_1^2} \\
+  = & (\frac{(a_1a_2 - b_1b_2 - c_1c_2 - d_1d_2)+(a_1b_2 + b_1a_2 + c_1d_2 - d_1c_2)\ui}{a_1^2+b_1^2+c_1^2+d_1^2} \\
+  & + \frac{(a_1c_2 - b_1d_2 + c_1a_2 + d_1c_2)\uj+(a_1d_2 + b_1c_2 - c_1b_2 + d_1a_2)\uk}{a_1^2+b_1^2+c_1^2+d_1^2}) \\
+  & \cdot \frac{(\quat{a_1}{-b_1}{-c_1}{-d_1})}{a_1^2+b_1^2+c_1^2+d_1^2} \\
+  = & \frac{1}{a_1^2+b_1^2+c_1^2+d_1^2}\cdot ((a_1^2a_2 - a_1b_1b_2 - a_1c_1c_2 - a_1d_1d_2 + a_1b_1b_2 + b_1^2a_2 + b_1c_1d_2 \\
+  & - b_1d_1c_2 + a_1c_1c_2 - b_1c_1d_2 + c_1^2a_2 + c_1d_1b_2 + a_1d_1d_2 + b_1d_1c_2 - c_1d_1b_2 + d_1^2a_2) \\
+  & + ( - a_1b_1a_2 + b_1^2b_2 + b_1c_1c_2 + b_1d_1d_2 + a_1^2b_2 + a_1b_1a_2 + a_1c_1d_2 - a_1d_1c_2 \\
+  & - a_1d_1c_2 + b_1d_1d_2 - c_1d_1a_2 - d_1^2b_2 + a_1c_1d_2 + b_1c_1c_2 - c_1^2b_2 + c_1d_1a_2) \\
+  & + ( - a_1c_1a_2 + b_1c_1b_2 + c_1^2c_2 + c_1d_1d_2 + a_1d_1b_2 + b_1d_1a_2 + c_1d_1d_2 - d_1^2c_2 \\
+  & + a_1^2c_2 - a_1b_1d_2 + a_1c_1a_2 + a_1d_1b_2 - a_1b_1d_2 - b_1^2c_2 + b_1c_1b_2 - b_1d_1a_2) \\
+  & + (- a_1d_1a_2 + b_1d_1b_2 + c_1d_1c_2 + d_1^2d_2 - a_1c_1b_2 - b_1c_1a_2 - c_1^2d_2 + c_1d_1c_2 \\
+  & + a_1b_1c_2 - b_1^2d_2 + b_1c_1a_2 + b_1d_1b_2 + a_1^2d_2 + a_1b_1c_2 - a_1c_1b_2 + a_1d_1a_2))\\
+  = & \frac{1}{a_1^2+b_1^2+c_1^2+d_1^2}\cdot ((a_1^2a_2 + b_1^2a_2 + c_1^2a_2 + d_1^2a_2) \\
+  & + (b_1^2b_2 + 2b_1c_1c_2 + 2b_1d_1d_2 + a_1^2b_2 + 2a_1c_1d_2 - 2a_1d_1c_2 - d_1^2b_2 - c_1^2b_2) \\
+  & + (2b_1c_1b_2 + c_1^2c_2 + 2c_1d_1d_2 + 2a_1d_1b_2 - d_1^2c_2 + a_1^2c_2 - 2a_1b_1d_2 - b_1^2c_2) \\
+  & + (2b_1d_1b_2 + 2c_1d_1c_2 + d_1^2d_2 - 2a_1c_1b_2 - c_1^2d_2 + 2a_1b_1c_2 - b_1^2d_2 + a_1^2d_2))\\
+  = & \frac{1}{a_1^2+b_1^2+c_1^2+d_1^2}\cdot ((a_1^2a_2 + b_1^2a_2 + c_1^2a_2 + d_1^2a_2) \\
+  & + ((a_1^2 + b_1^2 - c_1^2 - d_1^2)b_2 + 2b_1c_1c_2 - 2a_1d_1c_2 + 2b_1d_1d_2 + 2a_1c_1d_2) \\
+  & + ((a_1^2 - b_1^2 + c_1^2 - d_1^2)c_2 + 2c_1d_1d_2 - 2a_1b_1d_2 + 2b_1c_1b_2 + 2a_1d_1b_2) \\
+  & + ((a_1^2 - b_1^2 - c_1^2 + d_1^2)d_2 + 2b_1d_1b_2 - 2a_1c_1b_2 + 2a_1b_1c_2 + 2c_1d_1c_2))\\
+\end{align*}
+
+
+\end{document}

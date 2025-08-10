@@ -74,6 +74,10 @@ float Window::get_aspect_ratio() {
     return aspect_ratio;
 }
 
+std::pair<int, int> Window::get_size() {
+    return {width, height};
+}
+
 void Window::framebuffer_size_callback(GLFWwindow* window, int width, int height){
     Window *obj = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
     glViewport(0, 0, width, height);
@@ -83,10 +87,10 @@ void Window::framebuffer_size_callback(GLFWwindow* window, int width, int height
 }
 
 const float CIRCLE_VERTICES[] = {
-    -1.0f, -1.0f, 0.0f,
-    -1.0f,  1.0f, 0.0f,
-     1.0f, -1.0f, 0.0f,
-     1.0f,  1.0f, 0.0f,
+    -1.0f, -1.0f, 1.0f,
+    -1.0f,  1.0f, 1.0f,
+     1.0f, -1.0f, 1.0f,
+     1.0f,  1.0f, 1.0f,
 };
 
 const unsigned int CIRCLE_INDICES[] = {

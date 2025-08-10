@@ -1,1 +1,7 @@
 /build
+
+
+# note
+/note/*
+!/note/note.tex
+!/note/note.pdf

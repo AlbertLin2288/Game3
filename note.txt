@@ -1,0 +1,32 @@
+P(v<=V<v+dv) = k1 v^2 exp(v^2/k2)dv
+
+
+P(v^2<=V^2<v^2+d(v^2)) = P(v<=V<v+dv) = k1 v^2 exp(v^2/k2)dv = k1/2 v exp(v^2/k2)d(v^2)
+
+x^0.5exp(
+
+
+
+
+sqrt(k/pi)exp(-kv^2) dv
+
+x = v^2
+dv = 1/2sqrt(x) dx
+
+sqrt(k/pi)exp(-kx)x^-0.5 dx
+
+
+norm:
+1/sqrt(2sigma^2*pi) exp(-x^2/2sigma^2)
+
+2D:
+2pi*r * 1/sqrt(2sigma^2*pi)exp(-x^2/2sigma^2)
+
+E = sigma*sqrt(2pi) (r/sigma)*2 exp(-x^2/2sigma^2)
+
+v*p(v)
+
+1d: exp(v) = sqrt(2/pi) * sigma
+2d: exp(v) = pi          * sigma^2
+3d: exp(v) = 10.00265131 * sigma^3
+// 10.026513098523663
