@@ -32,3 +32,14 @@ public:
     ~Circle();
     void draw(const glm::mat4 &model, const glm::mat4 &viewProj, const glm::vec4 &color) const;
 };
+
+class Triangle {
+    Shader shader;
+    GLuint EBO, VAO, VBO;
+    GLint modelLoc, viewProjLoc, colorLoc;
+public:
+    Triangle();
+    Triangle(const glm::vec3 &p1, const glm::vec3 &p2, const glm::vec3 &p3);
+    ~Triangle();
+    void draw(const glm::mat4 &model, const glm::mat4 &viewProj, const glm::vec4 &color) const;
+};

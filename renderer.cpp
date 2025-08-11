@@ -86,6 +86,29 @@ void Window::framebuffer_size_callback(GLFWwindow* window, int width, int height
     obj->aspect_ratio = (float)width / (float)height;
 }
 
+void createObject(GLuint* VBO, GLuint* EBO, GLuint* VAO, const size_t &vertices_size, const float* vertices,
+    const size_t &indices_size, const unsigned int* indices)
+{
+    glGenBuffers(1, VBO);
+    glGenBuffers(1, EBO);
+    glGenVertexArrays(1, VAO);
+
+    glBindVertexArray(*VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, *VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices_size, vertices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_size, indices, GL_STATIC_DRAW);
+
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
 const float CIRCLE_VERTICES[] = {
     -1.0f, -1.0f, 1.0f,
     -1.0f,  1.0f, 1.0f,
@@ -101,24 +124,7 @@ const unsigned int CIRCLE_INDICES[] = {
 Circle::Circle() {
     shader = Shader("../shaders/circleShader.vs", "../shaders/circleShader.fs");
 
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-    glGenVertexArrays(1, &VAO);
-
-    glBindVertexArray(VAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(CIRCLE_VERTICES), CIRCLE_VERTICES, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(CIRCLE_INDICES), CIRCLE_INDICES, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    createObject(&VBO, &EBO, &VAO, sizeof(CIRCLE_VERTICES), CIRCLE_VERTICES, sizeof(CIRCLE_INDICES), CIRCLE_INDICES);
 
     modelLoc = shader.getUniformLocation("model");
     viewProjLoc = shader.getUniformLocation("viewProj");
@@ -132,6 +138,44 @@ Circle::~Circle() {
 }
 
 void Circle::draw(const glm::mat4 &model, const glm::mat4 &viewProj, const glm::vec4 &color) const {
+    shader.use();
+    shader.setUniform(modelLoc, model);
+    shader.setUniform(viewProjLoc, viewProj);
+    shader.setUniform(colorLoc, color);
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+}
+
+Triangle::Triangle(){}
+
+Triangle::Triangle(const glm::vec3 &p1, const glm::vec3 &p2, const glm::vec3 &p3) {
+    shader = Shader("../shaders/triangleShader.vs", "../shaders/triangleShader.fs");
+
+    const float vertices[] = {
+        p1[0], p1[1], p1[2],
+        p2[0], p2[1], p2[2],
+        p3[0], p3[1], p3[2]
+    };
+
+    const unsigned int indices[] = {
+        0, 1, 2
+    };
+
+    createObject(&VBO, &EBO, &VAO, sizeof(vertices), vertices, sizeof(indices), indices);
+
+    modelLoc = shader.getUniformLocation("model");
+    viewProjLoc = shader.getUniformLocation("viewProj");
+    colorLoc = shader.getUniformLocation("ourColor");
+}
+
+Triangle::~Triangle() {
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
+    glDeleteVertexArrays(1, &VAO);
+}
+
+void Triangle::draw(const glm::mat4 &model, const glm::mat4 &viewProj, const glm::vec4 &color) const {
     shader.use();
     shader.setUniform(modelLoc, model);
     shader.setUniform(viewProjLoc, viewProj);

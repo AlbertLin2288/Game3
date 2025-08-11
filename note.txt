@@ -26,7 +26,9 @@ E = sigma*sqrt(2pi) (r/sigma)*2 exp(-x^2/2sigma^2)
 
 v*p(v)
 
-1d: exp(v) = sqrt(2/pi) * sigma
-2d: exp(v) = pi          * sigma^2
-3d: exp(v) = 10.00265131 * sigma^3
+1d: exp(v) = sqrt(2/pi)  * sigma
+2d: exp(v) = pi          * sigma
+3d: exp(v) = 10.00265131 * sigma
 // 10.026513098523663
+
+

@@ -44,11 +44,13 @@ struct Player: SpaceObj {
 
 class PlayState : public GameState {
     Circle circle;
+    Triangle *ship_triangle;
     double prev_time;
-    bool k_left,k_right,k_up,k_down;
+    bool k_left,k_right,k_up,k_down,k_plus,k_minus;
     double cx,cy;
     Player player;
     std::vector<Star> stars;
+    float zoom;
     int seed;
     bool paused;
 public:

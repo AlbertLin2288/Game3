@@ -56,7 +56,8 @@ Star::Star(long double a_x, long double a_y, long double a_z,
 
 void Star::draw(const glm::mat4& viewProj, const Circle& circle) const {
     // scale
-    long double s = 0.003;
+    // long double s = 0.003;
+    long double s = 0.03;
     long double l = s / sqrt(x*x+y*y);
     glm::mat4 model(
         y*l, -x*l, 0.0l, 0.0l,
@@ -98,8 +99,9 @@ glm::mat4 Player::gen_view_matrix() const {
 
 PlayState::PlayState(int a_seed) : seed(a_seed) {
     prev_time = 0;
-    cx = cy = 0.0;
+    zoom = 3000.0;
     player = Player(0, 0, 1, 0, 0, 0, 0, 1, 0, 1);
+    ship_triangle = new Triangle({0.0, 10.0, 0.0}, {3.0, -5.0, 0.0}, {-3.0, -5.0, 0.0});
     stars.clear();
     std::mt19937 gen(seed);
 
@@ -126,7 +128,7 @@ PlayState::PlayState(int a_seed) : seed(a_seed) {
 }
 
 PlayState::~PlayState() {
-    ;
+    delete ship_triangle;
 }
 
 void PlayState::pause() {
@@ -168,6 +170,16 @@ void PlayState::handleEvents(GameEngine* game) {
     } else {
         k_right = false;
     }
+    if (game->window->getKey(GLFW_KEY_EQUAL) == GLFW_PRESS) {
+        k_plus = true;
+    } else {
+        k_plus = false;
+    }
+    if (game->window->getKey(GLFW_KEY_MINUS) == GLFW_PRESS) {
+        k_minus = true;
+    } else {
+        k_minus = false;
+    }
 }
 
 void PlayState::update(GameEngine* game) {
@@ -203,6 +215,8 @@ void PlayState::update(GameEngine* game) {
         player.diry = ct * player.diry + st * player.dirpy;
         player.dirz = ct * player.dirz + st * player.dirpz;
     }
+    if (k_plus && zoom < 50000.0) zoom *= 1.01;
+    if (k_minus && zoom > 400.0) zoom *= 0.99;
     player.x += player.vx * dt;
     player.y += player.vy * dt;
     player.z += player.vz * dt;
@@ -210,19 +224,20 @@ void PlayState::update(GameEngine* game) {
 }
 
 void PlayState::draw(GameEngine* game) {
-    game->window->fill(0.2f, 0.3f, 0.3f, 1.0f);
+    game->window->fill(0.0f, 0.0f, 0.0f, 1.0f);
     glm::mat4 view = player.gen_view_matrix();
-    float scale = 3000.0f;
-    view = glm::scale(view, glm::vec3(scale));
+    view = glm::scale(view, glm::vec3(zoom));
     float aspect_ratio = game->window->get_aspect_ratio();
     auto size = game->window->get_size();
     int width = size.first;
     int height = size.second;
-    glm::mat4 proj = glm::ortho(-width / 2.0f, width / 2.0f, -height / 2.0f, height / 2.0f, -scale-1.0f, 0.0f);
+    glm::mat4 proj = glm::ortho(-width / 2.0f, width / 2.0f, -height / 2.0f, height / 2.0f, -zoom-0.0001f, 0.0f);
     glm::mat4 viewProj = proj * view;
     for (auto& star:stars) {
         star.draw(viewProj, circle);
     }
+    glm::mat4 E(1.0);
+    ship_triangle->draw(E, proj, {0.6, 0.6, 0.6, 1.0});
 
     game->window->swapBuffers();
 }
