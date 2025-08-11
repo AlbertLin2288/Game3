@@ -12,20 +12,24 @@
 #define TPS 30
 // time per tick in ms
 constexpr float TIME_PER_TICK = 1000.0f / TPS;
+constexpr long double dt = TIME_PER_TICK * 0.01l;
 
 // stars count
 constexpr int STAR_COUNT_MIN = 350;
 constexpr int STAR_COUNT_MAX = 550;
 
 // stars mass
-constexpr long double STAR_MASS_MEAN = 100.0;
-constexpr long double STAR_MASS_VAR = 10.0;
+constexpr long double STAR_MASS_MEAN = 100.0l;
+constexpr long double STAR_MASS_VAR = 10.0l;
 
 // gravitation constant
-constexpr long double G = 1.0;
+constexpr long double G = 0.00000000001l;
 
 // average velocity
-constexpr long double STAR_VELOCITY = 0.01;
+constexpr long double STAR_VELOCITY = 0.0001l;
+
+// player acceleration
+constexpr long double player_acc = 0.0001l;
 
 SpaceObj::SpaceObj(){}
 SpaceObj::SpaceObj(long double a_x, long double a_y, long double a_z,
@@ -39,12 +43,51 @@ void SpaceObj::normalize() {
     x /= norm;
     y /= norm;
     z /= norm;
+    long double v_norm = vx * vx + vy * vy + vz * vz;
     long double v_per_norm = x * vx + y * vy + z * vz;
     vx -= v_per_norm * x;
     vy -= v_per_norm * y;
     vz -= v_per_norm * z;
+    long double n_v_norm = vx * vx + vy * vy + vz * vz;
+    if (n_v_norm != 0) {
+        v_norm = sqrt(v_norm / n_v_norm);
+        vx *= v_norm;
+        vy *= v_norm;
+        vz *= v_norm;
+    }
 }
 
+template<class T>
+void SpaceObj::fall(const std::vector<T*> objs) {
+    for (SpaceObj* obj: objs) {
+        if (obj == this) continue;
+        long double dx = obj->x - x;
+        long double dy = obj->y - y;
+        long double dz = obj->z - z;
+        long double d = dx * dx + dy * dy + dz * dz;
+        // ignore objects too far away
+        if (d > 1.0) continue;
+        d = acos(1 - d/2);
+
+        long double d_per_norm = dx * x + dy * y + dz * z;
+        dx -= d_per_norm * x;
+        dy -= d_per_norm * y;
+        dz -= d_per_norm * z;
+        long double d_norm = 1.0l / sqrt(dx * dx + dy * dy + dz * dz);
+        dx *= d_norm;
+        dy *= d_norm;
+        dz *= d_norm;
+
+        long double dv = G * mass * obj->mass / (d * d) * dt;
+
+        vx += dv * dx;
+        vy += dv * dy;
+        vz += dv * dz;
+    }
+    x += vx * dt;
+    y += vy * dt;
+    z += vz * dt;
+}
 
 Star::Star() {}
 
@@ -56,8 +99,8 @@ Star::Star(long double a_x, long double a_y, long double a_z,
 
 void Star::draw(const glm::mat4& viewProj, const Circle& circle) const {
     // scale
-    // long double s = 0.003;
-    long double s = 0.03;
+    long double s = 0.003;
+    // long double s = 0.03;
     long double l = s / sqrt(x*x+y*y);
     glm::mat4 model(
         y*l, -x*l, 0.0l, 0.0l,
@@ -85,6 +128,12 @@ void Player::normalize() {
     dirx -= d_per_norm * x;
     diry -= d_per_norm * y;
     dirz -= d_per_norm * z;
+
+    long double d_norm = 1.0l/sqrt(dirx*dirx+diry*diry+dirz*dirz);
+
+    dirx *= d_norm;
+    diry *= d_norm;
+    dirz *= d_norm;
 
     // perpendicular direction (to the right)
     dirpx = diry * z - dirz * y;
@@ -117,7 +166,7 @@ PlayState::PlayState(int a_seed) : seed(a_seed) {
     std::uniform_real_distribution<long double> pos_gen(-1.0, 1.0);
 
     for (int i=0;i<star_cnt;i++){
-        stars.push_back(Star(
+        stars.push_back(new Star(
             pos_gen(gen), pos_gen(gen), pos_gen(gen),
             velocity_gen(gen), velocity_gen(gen), velocity_gen(gen),
             mass_gen(gen)
@@ -128,6 +177,9 @@ PlayState::PlayState(int a_seed) : seed(a_seed) {
 }
 
 PlayState::~PlayState() {
+    for (auto star: stars) {
+        delete star;
+    }
     delete ship_triangle;
 }
 
@@ -195,18 +247,16 @@ void PlayState::update(GameEngine* game) {
         fprintf(stderr, "Can't keep up\n");
     }
 
-    long double dt = TIME_PER_TICK/1000.0l;
-
     if (k_up) {
         // cy += 0.05;
-        player.vx += 0.05l * dt * player.dirx;
-        player.vy += 0.05l * dt * player.diry;
-        player.vz += 0.05l * dt * player.dirz;
+        player.vx += player_acc * dt * player.dirx;
+        player.vy += player_acc * dt * player.diry;
+        player.vz += player_acc * dt * player.dirz;
     }
     if (k_down) {
-        player.vx -= 0.05l * dt * player.dirx;
-        player.vy -= 0.05l * dt * player.diry;
-        player.vz -= 0.05l * dt * player.dirz;
+        player.vx -= player_acc * dt * player.dirx;
+        player.vy -= player_acc * dt * player.diry;
+        player.vz -= player_acc * dt * player.dirz;
     }
     if (k_left ^ k_right) {
         long double ct = cos(0.03), st = sin(0.03);
@@ -217,9 +267,13 @@ void PlayState::update(GameEngine* game) {
     }
     if (k_plus && zoom < 50000.0) zoom *= 1.01;
     if (k_minus && zoom > 400.0) zoom *= 0.99;
-    player.x += player.vx * dt;
-    player.y += player.vy * dt;
-    player.z += player.vz * dt;
+    for (Star* star: stars) {
+        star->fall(stars);
+    }
+    player.fall(stars);
+    for (Star* star: stars) {
+        star->normalize();
+    }
     player.normalize();
 }
 
@@ -233,8 +287,8 @@ void PlayState::draw(GameEngine* game) {
     int height = size.second;
     glm::mat4 proj = glm::ortho(-width / 2.0f, width / 2.0f, -height / 2.0f, height / 2.0f, -zoom-0.0001f, 0.0f);
     glm::mat4 viewProj = proj * view;
-    for (auto& star:stars) {
-        star.draw(viewProj, circle);
+    for (auto star:stars) {
+        star->draw(viewProj, circle);
     }
     glm::mat4 E(1.0);
     ship_triangle->draw(E, proj, {0.6, 0.6, 0.6, 1.0});

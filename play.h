@@ -16,6 +16,10 @@ struct SpaceObj {
 
     // normalize the coord and move velocity back to being parallel the surface
     void normalize();
+
+    // simulate gravity
+    template<class T>
+    void fall(const std::vector<T*> objs);
 };
 
 struct Star : SpaceObj {
@@ -49,7 +53,7 @@ class PlayState : public GameState {
     bool k_left,k_right,k_up,k_down,k_plus,k_minus;
     double cx,cy;
     Player player;
-    std::vector<Star> stars;
+    std::vector<Star*> stars;
     float zoom;
     int seed;
     bool paused;
