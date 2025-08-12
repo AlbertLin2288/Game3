@@ -12,7 +12,7 @@
 #define TPS 30
 // time per tick in ms
 constexpr float TIME_PER_TICK = 1000.0f / TPS;
-constexpr long double dt = TIME_PER_TICK * 0.01l;
+constexpr long double dt = TIME_PER_TICK * 0.1l;
 
 // stars count
 constexpr int STAR_COUNT_MIN = 350;
@@ -23,13 +23,17 @@ constexpr long double STAR_MASS_MEAN = 100.0l;
 constexpr long double STAR_MASS_VAR = 10.0l;
 
 // gravitation constant
-constexpr long double G = 0.00000000001l;
+constexpr long double G = 0.0000000001l;
 
 // average velocity
-constexpr long double STAR_VELOCITY = 0.0001l;
+constexpr long double STAR_VELOCITY = 0.01l;
+
+
+// radius
+constexpr long double STAR_RADIUS = 0.003;
 
 // player acceleration
-constexpr long double player_acc = 0.0001l;
+constexpr long double player_acc = 0.00001l;
 
 SpaceObj::SpaceObj(){}
 SpaceObj::SpaceObj(long double a_x, long double a_y, long double a_z,
@@ -66,7 +70,8 @@ void SpaceObj::fall(const std::vector<T*> objs) {
         long double dz = obj->z - z;
         long double d = dx * dx + dy * dy + dz * dz;
         // ignore objects too far away
-        if (d > 1.0) continue;
+        if (d > 3.0) continue;
+        if (d < STAR_RADIUS * STAR_RADIUS * 0.1l) continue;
         d = acos(1 - d/2);
 
         long double d_per_norm = dx * x + dy * y + dz * z;
@@ -80,10 +85,13 @@ void SpaceObj::fall(const std::vector<T*> objs) {
 
         long double dv = G * mass * obj->mass / (d * d) * dt;
 
-        vx += dv * dx;
-        vy += dv * dy;
-        vz += dv * dz;
+        vx += dv * dx / mass;
+        vy += dv * dy / mass;
+        vz += dv * dz / mass;
     }
+}
+
+void SpaceObj::move() {
     x += vx * dt;
     y += vy * dt;
     z += vz * dt;
@@ -99,15 +107,16 @@ Star::Star(long double a_x, long double a_y, long double a_z,
 
 void Star::draw(const glm::mat4& viewProj, const Circle& circle) const {
     // scale
-    long double s = 0.003;
-    // long double s = 0.03;
-    long double l = s / sqrt(x*x+y*y);
+    long double l = STAR_RADIUS / sqrt(x*x+y*y);
     glm::mat4 model(
         y*l, -x*l, 0.0l, 0.0l,
         x*z*l, y*z*l, -x*x*l-y*y*l, 0.0l,
         x, y, z, 0.0l,
         0.0l, 0.0l, 0.0l, 1.0l
     );
+    if (mass>STAR_MASS_MEAN * 20)
+    circle.draw(model, viewProj, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    else
     circle.draw(model, viewProj, glm::vec4(1.0f, 1.0f, 0.0f, 1.0f));
 }
 
@@ -167,11 +176,14 @@ PlayState::PlayState(int a_seed) : seed(a_seed) {
 
     for (int i=0;i<star_cnt;i++){
         stars.push_back(new Star(
-            pos_gen(gen), pos_gen(gen), pos_gen(gen),
+            pos_gen(gen) * 2, pos_gen(gen), pos_gen(gen),
             velocity_gen(gen), velocity_gen(gen), velocity_gen(gen),
             mass_gen(gen)
         ));
     }
+
+    stars.push_back(new Star(1.0, 0.0, 0.0, 0.0, 0.0, 0.0, STAR_MASS_MEAN * 50.0));
+    stars.push_back(new Star(-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, STAR_MASS_MEAN * 50.0));
 
     paused = false;
 }
@@ -268,12 +280,14 @@ void PlayState::update(GameEngine* game) {
     if (k_plus && zoom < 50000.0) zoom *= 1.01;
     if (k_minus && zoom > 400.0) zoom *= 0.99;
     for (Star* star: stars) {
-        star->fall(stars);
+        // star->fall(stars);
     }
     player.fall(stars);
     for (Star* star: stars) {
+        // star->move();
         star->normalize();
     }
+    player.move();
     player.normalize();
 }
 

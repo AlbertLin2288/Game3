@@ -20,6 +20,7 @@ struct SpaceObj {
     // simulate gravity
     template<class T>
     void fall(const std::vector<T*> objs);
+    void move();
 };
 
 struct Star : SpaceObj {
