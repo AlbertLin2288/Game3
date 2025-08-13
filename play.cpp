@@ -299,7 +299,7 @@ void PlayState::draw(GameEngine* game) {
     auto size = game->window->get_size();
     int width = size.first;
     int height = size.second;
-    glm::mat4 proj = glm::ortho(-width / 2.0f, width / 2.0f, -height / 2.0f, height / 2.0f, -zoom-0.0001f, 0.0f);
+    glm::mat4 proj = glm::ortho(-width / 2.0f, width / 2.0f, -height / 2.0f, height / 2.0f, -zoom * 2, 0.0f);
     glm::mat4 viewProj = proj * view;
     for (auto star:stars) {
         star->draw(viewProj, circle);
