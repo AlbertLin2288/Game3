@@ -14,6 +14,14 @@
 constexpr float TIME_PER_TICK = 1000.0f / TPS;
 constexpr long double dt = TIME_PER_TICK * 0.1l;
 
+// grid
+constexpr int gridmode = 1; // 0: rectangular grid, 1: spherical grid
+
+constexpr long double RECT_GRID_CELL_SIZE = 0.04l; // world units
+
+constexpr long double GRID_CELL_HEIGHT = M_PI * 2 / 120; // radians
+constexpr long double GRID_CELL_WIDTH = M_PI * 2 / 36;
+
 // stars count
 constexpr int STAR_COUNT_MIN = 350;
 constexpr int STAR_COUNT_MAX = 550;
@@ -186,6 +194,7 @@ PlayState::PlayState(int a_seed) : seed(a_seed) {
     stars.push_back(new Star(-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, STAR_MASS_MEAN * 50.0));
 
     paused = false;
+    p_pressed = false;
 }
 
 PlayState::~PlayState() {
@@ -213,6 +222,13 @@ void PlayState::handleEvents(GameEngine* game) {
     if (game->window->getKey(GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         game->quit();
         return;
+    }
+    if (game->window->getKey(GLFW_KEY_P)==GLFW_PRESS && !p_pressed){
+        paused=!paused;
+        p_pressed=true;
+    }
+    if (game->window->getKey(GLFW_KEY_P)==GLFW_RELEASE){
+        p_pressed=false;
     }
     if (game->window->getKey(GLFW_KEY_UP) == GLFW_PRESS) {
         k_up = true;
@@ -248,6 +264,10 @@ void PlayState::handleEvents(GameEngine* game) {
 
 void PlayState::update(GameEngine* game) {
     double cur_time = game->window->getTime();
+    if(paused) { 
+        prev_time = cur_time;
+        return;
+    }
     if (prev_time != 0){
         prev_time = prev_time + TIME_PER_TICK;
     } else {
@@ -301,6 +321,86 @@ void PlayState::draw(GameEngine* game) {
     int height = size.second;
     glm::mat4 proj = glm::ortho(-width / 2.0f, width / 2.0f, -height / 2.0f, height / 2.0f, -zoom * 2, 0.0f);
     glm::mat4 viewProj = proj * view;
+
+    // Gridline code, for here rn but wrap in own function later
+    {
+        if(gridmode==1){
+            static Shader gridShader("../shaders/gridShader.vs","../shaders/gridShader.fs");
+            gridShader.use();
+            gridShader.setMat4f("viewProj", viewProj);
+            int seg = 100;
+            for (long double phi = GRID_CELL_HEIGHT; phi < M_PI - GRID_CELL_HEIGHT + 1e-9; phi += GRID_CELL_HEIGHT) {
+                std::vector<float> line;
+                for (int j = 0; j <= seg; j++) {
+                    long double theta = 2 * M_PI * j / seg;
+                    float a = sin(phi) * cos(theta);
+                    float b = sin(phi) * sin(theta);
+                    float c = cos(phi);
+                    line.push_back(a);
+                    line.push_back(b);
+                    line.push_back(c);
+                }
+                GLuint VBO, VAO;
+                glGenVertexArrays(1, &VAO);
+                glGenBuffers(1, &VBO);
+                glBindVertexArray(VAO);
+                glBindBuffer(GL_ARRAY_BUFFER, VBO);
+                glBufferData(GL_ARRAY_BUFFER, line.size() * sizeof(float), line.data(), GL_STATIC_DRAW);
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+                glEnableVertexAttribArray(0);
+                glDrawArrays(GL_LINE_STRIP, 0, seg + 1);
+                glDeleteBuffers(1, &VBO);
+                glDeleteVertexArrays(1, &VAO);
+            }
+            for (long double theta = 0; theta < 2 * M_PI; theta += GRID_CELL_WIDTH) {
+                std::vector<float> line;
+                for (int j = 0; j <= seg; j++) {
+                    long double phi = M_PI * j / seg;
+                    float a = sin(phi) * cos(theta);
+                    float b = sin(phi) * sin(theta);
+                    float c = cos(phi);
+                    line.push_back(a);
+                    line.push_back(b);
+                    line.push_back(c);
+                }
+                GLuint VBO, VAO;
+                glGenVertexArrays(1, &VAO);
+                glGenBuffers(1, &VBO);
+                glBindVertexArray(VAO);
+                glBindBuffer(GL_ARRAY_BUFFER, VBO);
+                glBufferData(GL_ARRAY_BUFFER, line.size() * sizeof(float), line.data(), GL_STATIC_DRAW);
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+                glEnableVertexAttribArray(0);
+                glDrawArrays(GL_LINE_STRIP, 0, seg + 1);
+                glDeleteBuffers(1, &VBO);
+                glDeleteVertexArrays(1, &VAO);
+            }
+        } else {
+            static Shader rectGridShader("../shaders/rectGrid.vs","../shaders/rectGrid.fs");
+            rectGridShader.use();
+            glm::mat4 invViewProj = glm::inverse(viewProj);
+            rectGridShader.setMat4f("invViewProj", invViewProj);
+            rectGridShader.setFloat("cellSize", RECT_GRID_CELL_SIZE);
+            // Pass the player's world position so that the grid remains in world space.
+            rectGridShader.setVec2f("gridOffset", glm::vec2(player.x, player.y));
+            
+            static GLuint VAO = 0, VBO;
+            if (VAO == 0) {
+                float quad[] = { -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f };
+                glGenVertexArrays(1, &VAO);
+                glGenBuffers(1, &VBO);
+                glBindVertexArray(VAO);
+                glBindBuffer(GL_ARRAY_BUFFER, VBO);
+                glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
+                glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+                glEnableVertexAttribArray(0);
+            }
+            
+            glBindVertexArray(VAO);
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+            glBindVertexArray(0);
+        }
+    }
     for (auto star:stars) {
         star->draw(viewProj, circle);
     }

@@ -25,6 +25,7 @@ public:
     void setBool(const std::string &name, bool value) const;
     void setInt(const std::string &name, int value) const;
     void setFloat(const std::string &name, float value) const;
+    void setVec2f(const std::string &name, const glm::vec2 &value) const;
     void setVec4f(const std::string &name, const glm::vec4& vec) const;
     void setMat4f(const std::string &name, const glm::mat4& mat) const;
 };
