@@ -375,7 +375,7 @@ void PlayState::draw(GameEngine* game) {
                 glDeleteBuffers(1, &VBO);
                 glDeleteVertexArrays(1, &VAO);
             }
-        } else {
+        } else if (gridmode==0) {
             static Shader rectGridShader("../shaders/rectGrid.vs","../shaders/rectGrid.fs");
             rectGridShader.use();
             glm::mat4 invViewProj = glm::inverse(viewProj);
