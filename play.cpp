@@ -15,7 +15,7 @@ constexpr float TIME_PER_TICK = 1000.0f / TPS;
 constexpr long double dt = TIME_PER_TICK * 0.1l;
 
 // grid
-constexpr int gridmode = 1; // 0: rectangular grid, 1: spherical grid
+constexpr int gridmode = 0; // 0: rectangular grid, 1: spherical grid, 2+: no grid
 
 constexpr long double RECT_GRID_CELL_SIZE = 0.04l; // world units
 
@@ -194,7 +194,7 @@ PlayState::PlayState(int a_seed) : seed(a_seed) {
     stars.push_back(new Star(-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, STAR_MASS_MEAN * 50.0));
 
     paused = false;
-    p_pressed = false;
+    space_pressed = false;
 }
 
 PlayState::~PlayState() {
@@ -223,12 +223,12 @@ void PlayState::handleEvents(GameEngine* game) {
         game->quit();
         return;
     }
-    if (game->window->getKey(GLFW_KEY_P)==GLFW_PRESS && !p_pressed){
+    if (game->window->getKey(GLFW_KEY_SPACE)==GLFW_PRESS && !space_pressed){
         paused=!paused;
-        p_pressed=true;
+        space_pressed=true;
     }
-    if (game->window->getKey(GLFW_KEY_P)==GLFW_RELEASE){
-        p_pressed=false;
+    if (game->window->getKey(GLFW_KEY_SPACE)==GLFW_RELEASE){
+        space_pressed=false;
     }
     if (game->window->getKey(GLFW_KEY_UP) == GLFW_PRESS) {
         k_up = true;

@@ -58,7 +58,7 @@ class PlayState : public GameState {
     float zoom;
     int seed;
     bool paused;
-    bool p_pressed;
+    bool space_pressed;
 public:
     PlayState(int a_seed);
     ~PlayState();
