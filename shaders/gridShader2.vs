@@ -2,17 +2,16 @@
 layout (location = 0) in vec3 aPos;
 
 out vec2 gridPos;
+out vec3 worldPos;
 uniform vec3 dirx;
 uniform vec3 diry;
-uniform vec2 offset;
 
 uniform mat4 invViewProj;
 
 void main() {
-    vec4 worldPos = invViewProj * vec4(aPos.xy, 1.0, 1.0);
-    worldPos.xyz /= worldPos.w;
-    gridPos.x = dot(worldPos.xyz, dirx);
-    gridPos.y = dot(worldPos.xyz, diry);
-    gridPos += offset;
+    vec4 worldPos4 = invViewProj * vec4(aPos.xy, 1.0, 1.0);
+    worldPos = worldPos4.xyz /= worldPos4.w;
+    gridPos.x = dot(worldPos, dirx);
+    gridPos.y = dot(worldPos, diry);
     gl_Position = vec4(aPos.xy, 0.0, 1.0);
 }
