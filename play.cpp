@@ -15,7 +15,9 @@ constexpr float TIME_PER_TICK = 1000.0f / TPS;
 constexpr long double dt = TIME_PER_TICK * 0.1l;
 
 // grid
-constexpr int gridmode = 0; // 0: rectangular grid, 1: spherical grid, 2+: no grid
+constexpr int gridmode = 2; // 0: rectangular grid, 1: spherical grid, 2: testing, 3+: no grid
+
+constexpr long double GRID_SIZE = 0.04l;
 
 constexpr long double RECT_GRID_CELL_SIZE = 0.04l; // world units
 
@@ -31,7 +33,8 @@ constexpr long double STAR_MASS_MEAN = 100.0l;
 constexpr long double STAR_MASS_VAR = 10.0l;
 
 // gravitation constant
-constexpr long double G = 0.0000000001l;
+// constexpr long double G = 0.0000000001l;
+constexpr long double G = 0.0l;
 
 // average velocity
 constexpr long double STAR_VELOCITY = 0.01l;
@@ -44,28 +47,19 @@ constexpr long double STAR_RADIUS = 0.003;
 constexpr long double player_acc = 0.00001l;
 
 SpaceObj::SpaceObj(){}
-SpaceObj::SpaceObj(long double a_x, long double a_y, long double a_z,
-    long double a_vx, long double a_vy, long double a_vz, long double a_mass) :
-    x(a_x), y(a_y), z(a_z), vx(a_vx), vy(a_vy), vz(a_vz), mass(a_mass) {
+SpaceObj::SpaceObj(long double a_mass, const myvec::vec3 &a_pos, const myvec::vec3 &a_v) :
+    pos(a_pos), v(a_v), mass(a_mass) {
     normalize();
 }
 
 void SpaceObj::normalize() {
-    long double norm = sqrt(x*x+y*y+z*z);
-    x /= norm;
-    y /= norm;
-    z /= norm;
-    long double v_norm = vx * vx + vy * vy + vz * vz;
-    long double v_per_norm = x * vx + y * vy + z * vz;
-    vx -= v_per_norm * x;
-    vy -= v_per_norm * y;
-    vz -= v_per_norm * z;
-    long double n_v_norm = vx * vx + vy * vy + vz * vz;
+    pos.normalize();
+    long double v_norm = v.norm();;
+    long double v_per_norm = pos.dot(v);
+    v -= pos * v_per_norm;
+    long double n_v_norm = v.norm();
     if (n_v_norm != 0) {
-        v_norm = sqrt(v_norm / n_v_norm);
-        vx *= v_norm;
-        vy *= v_norm;
-        vz *= v_norm;
+        v *= v_norm / n_v_norm;
     }
 }
 
@@ -73,48 +67,37 @@ template<class T>
 void SpaceObj::fall(const std::vector<T*> objs) {
     for (SpaceObj* obj: objs) {
         if (obj == this) continue;
-        long double dx = obj->x - x;
-        long double dy = obj->y - y;
-        long double dz = obj->z - z;
-        long double d = dx * dx + dy * dy + dz * dz;
+        myvec::vec3 dp = obj->pos - pos;
+        long double d = dp.sqrNorm();
         // ignore objects too far away
         if (d > 3.0) continue;
         if (d < STAR_RADIUS * STAR_RADIUS * 0.1l) continue;
         d = acos(1 - d/2);
 
-        long double d_per_norm = dx * x + dy * y + dz * z;
-        dx -= d_per_norm * x;
-        dy -= d_per_norm * y;
-        dz -= d_per_norm * z;
-        long double d_norm = 1.0l / sqrt(dx * dx + dy * dy + dz * dz);
-        dx *= d_norm;
-        dy *= d_norm;
-        dz *= d_norm;
+        long double d_per_norm = dp.dot(pos);
+        pos -= pos * d_per_norm;
+        pos.normalize();
 
-        long double dv = G * mass * obj->mass / (d * d) * dt;
+        long double dv = G * obj->mass / (d * d) * dt;
 
-        vx += dv * dx / mass;
-        vy += dv * dy / mass;
-        vz += dv * dz / mass;
+        dp.normalize();
+        v += dp * dv;
     }
 }
 
 void SpaceObj::move() {
-    x += vx * dt;
-    y += vy * dt;
-    z += vz * dt;
+    pos += v * dt;
 }
 
 Star::Star() {}
 
-Star::Star(long double a_x, long double a_y, long double a_z,
-    long double a_vx, long double a_vy, long double a_vz,
-    long double a_mass) :
-    SpaceObj(a_x, a_y, a_z, a_vx, a_vy, a_vz, a_mass) {
+Star::Star(long double a_mass, const myvec::vec3 &a_pos, const myvec::vec3 &a_v) :
+    SpaceObj(a_mass, a_pos, a_v) {
     }
 
 void Star::draw(const glm::mat4& viewProj, const Circle& circle) const {
     // scale
+    long double x = pos.x, y = pos.y, z = pos.z;
     long double l = STAR_RADIUS / sqrt(x*x+y*y);
     glm::mat4 model(
         y*l, -x*l, 0.0l, 0.0l,
@@ -131,42 +114,48 @@ void Star::draw(const glm::mat4& viewProj, const Circle& circle) const {
 
 Player::Player() {};
 
-Player::Player(long double a_x, long double a_y, long double a_z,
-    long double a_vx, long double a_vy, long double a_vz,
-    long double a_dirx, long double a_diry, long double a_dirz,
-    long double a_mass) :
-    SpaceObj(a_x, a_y, a_z, a_vx, a_vy, a_vz, a_mass), dirx(a_dirx), diry(a_diry), dirz(a_dirz) {
+Player::Player(
+    long double a_mass, const myvec::vec3 &a_pos, const myvec::vec3 &a_v,
+    const myvec::vec3 &a_dir, const myvec::vec3 &a_dirg,
+    const myvec::vec3 &a_ceng, const myvec::vec2 &a_difg
+) :
+    SpaceObj(a_mass, a_pos, a_v), dir(a_dir),
+    dirg(a_dirg), ceng(a_ceng), difg(a_difg) {
     normalize();
 }
 
 void Player::normalize() {
     SpaceObj::normalize();
-    long double d_per_norm = x * dirx + y * diry + z * dirz;
-    dirx -= d_per_norm * x;
-    diry -= d_per_norm * y;
-    dirz -= d_per_norm * z;
+    long double d_per_norm = pos.dot(dir);
+    dir -= pos * d_per_norm;
 
-    long double d_norm = 1.0l/sqrt(dirx*dirx+diry*diry+dirz*dirz);
-
-    dirx *= d_norm;
-    diry *= d_norm;
-    dirz *= d_norm;
+    dir.normalize();
 
     // perpendicular direction (to the right)
-    dirpx = diry * z - dirz * y;
-    dirpy = dirz * x - dirx * z;
-    dirpz = dirx * y - diry * x;
+    dirp = dir.cross(pos);
+
+    // direction of gridlines
+    myvec::vec3 difp = pos - ceng;
+    dirpg = dirg.cross(pos);
+    difg += {dirpg.dot(difp), dirg.dot(difp)};
+
+    difg.x = std::fmod(difg.x, GRID_SIZE);
+    difg.y = std::fmod(difg.y, GRID_SIZE);
+
+    dirg -= pos.dot(dirg) * pos;
+    dirg.normalize();
+    ceng = pos;
 }
 
 glm::mat4 Player::gen_view_matrix() const {
-    return glm::lookAt(glm::vec3(0.0l, 0.0l, 0.0l), glm::vec3(-x, -y, -z), glm::vec3(dirx, diry, dirz));
+    return glm::lookAt(glm::vec3(0.0l, 0.0l, 0.0l), (glm::vec3)(-pos), (glm::vec3)dir);
 }
 
 
 PlayState::PlayState(int a_seed) : seed(a_seed) {
     prev_time = 0;
     zoom = 3000.0;
-    player = Player(0, 0, 1, 0, 0, 0, 0, 1, 0, 1);
+    player = Player(1.0l);
     ship_triangle = new Triangle({0.0, 10.0, 0.0}, {3.0, -5.0, 0.0}, {-3.0, -5.0, 0.0});
     stars.clear();
     std::mt19937 gen(seed);
@@ -184,14 +173,14 @@ PlayState::PlayState(int a_seed) : seed(a_seed) {
 
     for (int i=0;i<star_cnt;i++){
         stars.push_back(new Star(
-            pos_gen(gen) * 2, pos_gen(gen), pos_gen(gen),
-            velocity_gen(gen), velocity_gen(gen), velocity_gen(gen),
-            mass_gen(gen)
+            mass_gen(gen),
+            {pos_gen(gen) * 2, pos_gen(gen), pos_gen(gen)},
+            {velocity_gen(gen), velocity_gen(gen), velocity_gen(gen)}
         ));
     }
 
-    stars.push_back(new Star(1.0, 0.0, 0.0, 0.0, 0.0, 0.0, STAR_MASS_MEAN * 50.0));
-    stars.push_back(new Star(-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, STAR_MASS_MEAN * 50.0));
+    stars.push_back(new Star(STAR_MASS_MEAN * 50.0, {1.0, 0.0, 0.0}, {0.0, 0.0, 0.0}));
+    stars.push_back(new Star(STAR_MASS_MEAN * 50.0, {-1.0, 0.0, 0.0}, {0.0, 0.0, 0.0}));
 
     paused = false;
     space_pressed = false;
@@ -281,21 +270,15 @@ void PlayState::update(GameEngine* game) {
 
     if (k_up) {
         // cy += 0.05;
-        player.vx += player_acc * dt * player.dirx;
-        player.vy += player_acc * dt * player.diry;
-        player.vz += player_acc * dt * player.dirz;
+        player.v += (player_acc * dt) * player.dir;
     }
     if (k_down) {
-        player.vx -= player_acc * dt * player.dirx;
-        player.vy -= player_acc * dt * player.diry;
-        player.vz -= player_acc * dt * player.dirz;
+        player.v -= (player_acc * dt) * player.dir;
     }
     if (k_left ^ k_right) {
         long double ct = cos(0.03), st = sin(0.03);
         if (k_left) st = -st;
-        player.dirx = ct * player.dirx + st * player.dirpx;
-        player.diry = ct * player.diry + st * player.dirpy;
-        player.dirz = ct * player.dirz + st * player.dirpz;
+        player.dir = ct * player.dir + st * player.dirp;
     }
     if (k_plus && zoom < 50000.0) zoom *= 1.01;
     if (k_minus && zoom > 400.0) zoom *= 0.99;
@@ -382,7 +365,7 @@ void PlayState::draw(GameEngine* game) {
             rectGridShader.setMat4f("invViewProj", invViewProj);
             rectGridShader.setFloat("cellSize", RECT_GRID_CELL_SIZE);
             // Pass the player's world position so that the grid remains in world space.
-            rectGridShader.setVec2f("gridOffset", glm::vec2(player.x, player.y));
+            rectGridShader.setVec2f("gridOffset", glm::vec2(player.pos.x, player.pos.y));
             
             static GLuint VAO = 0, VBO;
             if (VAO == 0) {
@@ -399,6 +382,11 @@ void PlayState::draw(GameEngine* game) {
             glBindVertexArray(VAO);
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             glBindVertexArray(0);
+        } else if (gridmode == 2) {
+            // testing
+            // glm::mat2x3 transform = viewProj * glm::mat2x3(player.dirpg, player.dirg);
+            // grid.draw(GRID_SIZE, glm::inverse(viewProj * transform));
+            grid.draw(GRID_SIZE, glm::inverse(viewProj), player.dirpg, player.dirg, player.difg);
         }
     }
     for (auto star:stars) {

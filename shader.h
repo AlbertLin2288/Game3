@@ -5,6 +5,8 @@
 #include <glm/fwd.hpp>
 #include <string>
 
+#include "myvec.h"
+
 class Shader {
 public:
     GLuint program;
@@ -18,7 +20,9 @@ public:
 
     void setUniform(const GLint location, int value) const;
     void setUniform(const GLint location, float value) const;
+    void setUniform(const GLint location, const myvec::vec2 &value) const;
     void setUniform(const GLint location, const glm::vec3 &value) const;
+    void setUniform(const GLint location, const myvec::vec3 &value) const;
     void setUniform(const GLint location, const glm::vec4 &value) const;
     void setUniform(const GLint location, const glm::mat4 &value) const;
 

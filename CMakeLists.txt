@@ -19,6 +19,7 @@ add_executable(Game3
     play.cpp
     #utilities
     utils.cpp
+    myvec.cpp
 )
 
 

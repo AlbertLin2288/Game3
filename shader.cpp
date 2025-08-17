@@ -95,6 +95,14 @@ void Shader::setUniform(const GLint location, const glm::mat4 &value) const {
     glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value));
 }
 
+void Shader::setUniform(const GLint location, const myvec::vec2 &value) const {
+    glUniform2f(location, value.x, value.y);
+}
+
+void Shader::setUniform(const GLint location, const myvec::vec3 &value) const {
+    glUniform3f(location, value.x, value.y, value.z);
+}
+
 void Shader::setBool(const std::string &name, bool value) const {
     glUniform1i(glGetUniformLocation(program, name.c_str()), (int)value);
 }

@@ -3,6 +3,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include "myvec.h"
 #include "renderer.h"
 
 Window::Window(int a_width, int a_height) : width(a_width), height(a_height) {
@@ -184,3 +185,47 @@ void Triangle::draw(const glm::mat4 &model, const glm::mat4 &viewProj, const glm
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 }
+
+
+const float GRID_VERTICES[] = {
+    -1.0f, -1.0f, 1.0f,
+    -1.0f,  1.0f, 1.0f,
+     1.0f, -1.0f, 1.0f,
+     1.0f,  1.0f, 1.0f,
+};
+
+const unsigned int GRID_INDICES[] = {
+    0, 1, 2,
+    1, 2, 3,
+};
+
+Grid::Grid() {
+    shader = Shader("../shaders/gridShader2.vs", "../shaders/gridShader2.fs");
+
+    createObject(&VBO, &EBO, &VAO, sizeof(GRID_VERTICES), GRID_VERTICES, sizeof(GRID_INDICES), GRID_INDICES);
+
+    cellSizeLoc = shader.getUniformLocation("cellSize");
+    invViewProjLoc = shader.getUniformLocation("invViewProj");
+    dirxLoc = shader.getUniformLocation("dirx");
+    diryLoc = shader.getUniformLocation("diry");
+    offsetLoc = shader.getUniformLocation("offset");
+}
+
+Grid::~Grid() {
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
+    glDeleteVertexArrays(1, &VAO);
+}
+
+void Grid::draw(const float &cellSize, const glm::mat4 &invViewProj, const myvec::vec3 &dirx, const myvec::vec3 &diry, const myvec::vec2 &offset) const {
+    shader.use();
+    shader.setUniform(cellSizeLoc, cellSize);
+    shader.setUniform(invViewProjLoc, invViewProj);
+    shader.setUniform(dirxLoc, dirx);
+    shader.setUniform(diryLoc, diry);
+    shader.setUniform(offsetLoc, offset);
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+}
+

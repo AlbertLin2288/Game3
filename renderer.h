@@ -43,3 +43,13 @@ public:
     ~Triangle();
     void draw(const glm::mat4 &model, const glm::mat4 &viewProj, const glm::vec4 &color) const;
 };
+
+class Grid {
+    Shader shader;
+    GLuint EBO, VAO, VBO;
+    GLint cellSizeLoc, invViewProjLoc, dirxLoc, diryLoc, offsetLoc;//, gridOffsetLoc;
+public:
+    Grid();
+    ~Grid();
+    void draw(const float &cellSize, const glm::mat4 &invViewProj, const myvec::vec3 &dirx, const myvec::vec3 &diry, const myvec::vec2 &offset) const;
+};
