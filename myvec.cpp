@@ -73,6 +73,10 @@ namespace myvec {
 
     vec3::vec3() {}
 
+    vec3::vec3(const long double &v) {
+        x = y = z = v;
+    }
+
     vec3::vec3(const vec3& v) {
         x = v.x;
         y = v.y;
@@ -120,6 +124,12 @@ namespace myvec {
         return *this;
     }
 
+    void vec3::clear() {
+        x = 0;
+        y = 0;
+        z = 0;
+    }
+
     long double vec3::dot(const vec3 &rhs) const {
         return (
             x * rhs.x +
@@ -133,6 +143,14 @@ namespace myvec {
             y * rhs.z - z * rhs.y,
             z * rhs.x - x * rhs.z,
             x * rhs.y - y * rhs.x
+        );
+    }
+
+    vec3 vec3::hada(const vec3 &rhs) const {
+        return vec3(
+            x * rhs.x,
+            y * rhs.y,
+            z * rhs.z
         );
     }
 

@@ -1,0 +1,257 @@
+\documentclass[12pt,letterpaper]{article}
+\usepackage{fullpage}
+\usepackage[top=2cm, bottom=4.5cm, left=2.5cm, right=2.5cm]{geometry}
+\usepackage{amsmath,amsthm,amsfonts,amssymb,amscd}
+\usepackage{bm}
+\usepackage{lastpage}
+\usepackage{enumerate}
+\usepackage{fancyhdr}
+\usepackage{mathrsfs}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{tikz}
+
+
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\hypersetup{%
+    colorlinks=true,
+    linkcolor=blue,
+    linkbordercolor={0 0 1}
+}
+
+\setlength{\parindent}{0.0in}
+\setlength{\parskip}{0.05in}
+
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\ve}[1]{\bm{#1}}
+\newcommand{\vex}{\bm{x}}
+\newcommand{\vep}{\bm{p}}
+\newcommand{\vev}{\bm{v}}
+\newcommand{\ves}{\bm{s}}
+\newcommand{\der}[2]{\frac{\text{d} #1}{\text{d} #2}}
+\newcommand{\ders}[2]{\frac{\text{d}^2 #1}{{\text{d} #2}^2}}
+\newcommand{\pard}[2]{\frac{\partial #1}{\partial #2}}
+
+
+
+\begin{document}
+    For single object:
+    \[
+    \begin{cases}
+        \der{\vep_i}{t}&=\vev_i \\
+        \der{\vev_i}{t}&=\sum_{j\neq i}\frac{Gm_j(\vep_j-\vep_i)}{|\vep_j-\vep_i|^3} \\
+    \end{cases}
+    \]
+
+    \[
+    \begin{cases}
+        \der{\vep_{xi}}{t}&=\vev_{xi}\\
+        \der{\vev_{xi}}{t}&=\sum_{j\neq i}\frac{Gm_j(\vep_{xj}-\vep_{xi})}{\sqrt{(\vep_{xj}-\vep_{xi})^2+(\vep_{yj}-\vep_{yi})^2+(\vep_{zj}-\vep_{zi})^2}^3} \\
+    \end{cases}
+    \]
+
+    \begin{align*}
+        \ders{\left[\begin{matrix}\vep\\\vev\\\end{matrix}\right]}{t}
+        =\der{\left[\begin{matrix}\vep'\\\vev'\\\end{matrix}\right]}{t}
+        &=\sum_{j}\pard{\left[\begin{matrix}\vep'\\\vev'\\\end{matrix}\right]}{\left[\begin{matrix}\vep\\\vev\\\end{matrix}\right]_j} \cdot \der{\left[\begin{matrix}\vep\\\vev\\\end{matrix}\right]_j}{t}\\
+        \der{\left[\begin{matrix}\vep'\\\vev'\\\end{matrix}\right]_i}{t}
+        &=\sum_{j}\pard{\left[\begin{matrix}\vep'\\\vev'\\\end{matrix}\right]_i}{\left[\begin{matrix}\vep\\\vev\\\end{matrix}\right]_j} \cdot \der{\left[\begin{matrix}\vep\\\vev\\\end{matrix}\right]_j}{t}\\
+    \end{align*}
+
+    \begin{align*}
+        \ders{\vep_{xi}}{t}
+        &=\sum_{j}\pard{\vep_{xi}'}{\left[\begin{matrix}\vep\\\vev\\\end{matrix}\right]_j} \cdot \der{\left[\begin{matrix}\vep\\\vev\\\end{matrix}\right]_j}{t}\\
+        &=\sum_{j}\pard{\vev_{xi}}{\left[\begin{matrix}\vep\\\vev\\\end{matrix}\right]_j} \cdot \der{\left[\begin{matrix}\vep\\\vev\\\end{matrix}\right]_j}{t}\\
+        &=\der{\vev_{xi}}{t}\\
+    \end{align*}
+
+    \begin{align*}
+        \ders{\vev_{xi}}{t}
+        &=\sum_{k}\pard{\vev_{xi}'}{\left[\begin{matrix}\vep\\\vev\\\end{matrix}\right]_k} \cdot \der{\left[\begin{matrix}\vep\\\vev\\\end{matrix}\right]_k}{t}\\
+        &=\sum_{k}\pard{\sum_{j\neq i}\frac{Gm_j(\vep_{xj}-\vep_{xi})}{\sqrt{(\vep_{xj}-\vep_{xi})^2+(\vep_{yj}-\vep_{yi})^2+(\vep_{zj}-\vep_{zi})^2}^3}}{\left[\begin{matrix}\vep\\\vev\\\end{matrix}\right]_k} \cdot \der{\left[\begin{matrix}\vep\\\vev\\\end{matrix}\right]_k}{t}\\
+        &=\begin{aligned}[t]
+            &\sum_{k\neq i}\pard{\sum_{j\neq i}\frac{Gm_j(\vep_{xj}-\vep_{xi})}{\sqrt{(\vep_{xj}-\vep_{xi})^2+(\vep_{yj}-\vep_{yi})^2+(\vep_{zj}-\vep_{zi})^2}^3}}{\vep_{xk}} \cdot \der{\vep_{xk}}{t}\\
+            &+\sum_{k\neq i}\pard{\sum_{j\neq i}\frac{Gm_j(\vep_{xj}-\vep_{xi})}{\sqrt{(\vep_{xj}-\vep_{xi})^2+(\vep_{yj}-\vep_{yi})^2+(\vep_{zj}-\vep_{zi})^2}^3}}{\vep_{y|z\,k}} \cdot \der{\vep_{y|z\,k}}{t}\\
+            &+\pard{\sum_{j\neq i}\frac{Gm_j(\vep_{xj}-\vep_{xi})}{\sqrt{(\vep_{xj}-\vep_{xi})^2+(\vep_{yj}-\vep_{yi})^2+(\vep_{zj}-\vep_{zi})^2}^3}}{\vep_{xi}} \cdot \der{\vep_{xi}}{t}\\
+        \end{aligned}\\
+        %
+        &=\begin{aligned}[t]
+            &\sum_{j\neq i}\pard{\frac{Gm_j(\vep_{xj}-\vep_{xi})}{\sqrt{(\vep_{xj}-\vep_{xi})^2+(\vep_{yj}-\vep_{yi})^2+(\vep_{zj}-\vep_{zi})^2}^3}}{\vep_{xj}} \cdot \der{\vep_{xj}}{t}\\
+            &+\sum_{j\neq i}\pard{\frac{Gm_j(\vep_{xj}-\vep_{xi})}{\sqrt{(\vep_{xj}-\vep_{xi})^2+(\vep_{yj}-\vep_{yi})^2+(\vep_{zj}-\vep_{zi})^2}^3}}{\vep_{y|z\,j}} \cdot \der{\vep_{y|z\,j}}{t}\\
+            &+\sum_{j\neq i}\pard{\frac{Gm_j(\vep_{xj}-\vep_{xi})}{\sqrt{(\vep_{xj}-\vep_{xi})^2+(\vep_{yj}-\vep_{yi})^2+(\vep_{zj}-\vep_{zi})^2}^3}}{\vep_{xi}} \cdot \der{\vep_{xi}}{t}\\
+        \end{aligned}\\
+        % &=-\der{\vev_{xi}}{t}\\
+    \end{align*}
+
+
+    Let $C_x = \vep_{xj}-\vep_{xi}$, $C_y = \vep_{yj}-\vep_{yi}$ and $C_z = \vep_{zj}-\vep_{zi}$.
+    % \begin{align*}
+    %     &\pard{\frac{Gm_j(\vep_{xj}-\vep_{xi})}{\sqrt{(\vep_{xj}-\vep_{xi})^2+(\vep_{yj}-\vep_{yi})^2+(\vep_{zj}-\vep_{zi})^2}^3}}{\vep_{xj}}\\
+    %     =&\pard{\frac{Gm_j(\vep_{xj}-\vep_{xi})}{\sqrt{(\vep_{xj}-\vep_{xi})^2+C_y^2+C_z^2}^3}}{\vep_{xj}}\\
+    %     =&\frac{Gm_j}{\sqrt{(\vep_{xj}-\vep_{xi})^2+C_y^2+C_z^2}^3}-Gm_j(\vep_{xj}-\vep_{xi})\cdot\left(\frac{3}{2}\frac{2(\vep_{xj}-\vep_{xi})}{\sqrt{(\vep_{xj}-\vep_{xi})^2+C_y^2+C_z^2}^5}\right)\\
+    %     =&Gm_j\left(\frac{((\vep_{xj}-\vep_{xi})^2+C_y^2+C_z^2)-3(\vep_{xj}-\vep_{xi}^2)}{\sqrt{(\vep_{xj}-\vep_{xi})^2+C_y^2+C_z^2}^5}\right)\\
+    %     =&Gm_j\left(\frac{C_y^2+C_z^2-2C_x^2}{\sqrt{C_x^2+C_y^2+C_z^2}^5}\right)\\
+    % \end{align*}
+    \begin{align*}
+        \pard{\frac{Gm_j(\vep_{xj}-\vep_{xi})}{\sqrt{(\vep_{xj}-\vep_{xi})^2+(\vep_{yj}-\vep_{yi})^2+(\vep_{zj}-\vep_{zi})^2}^3}}{\vep_{xj}}
+        &=\pard{\frac{Gm_jC_x}{\sqrt{C_x^2+C_y^2+C_z^2}^3}}{\vep_{xj}}\\
+        &=\pard{\frac{Gm_jC_x}{\sqrt{C_x^2+C_y^2+C_z^2}^3}}{C_x}\cdot\der{C_x}{\vep_{x_j}}\\
+        &=\frac{Gm_j}{\sqrt{C_x^2+C_y^2+C_z^2}^3}-Gm_jC_x\cdot\left(\frac{3}{2}\frac{2C_x}{\sqrt{C_x^2+C_y^2+C_z^2}^5}\right)\cdot1\\
+        &=Gm_j\left(\frac{(C_x^2+C_y^2+C_z^2)-3C_x^2}{\sqrt{C_x^2+C_y^2+C_z^2}^5}\right)\\
+        &=Gm_j\left(\frac{C_y^2+C_z^2-2C_x^2}{\sqrt{C_x^2+C_y^2+C_z^2}^5}\right)\\
+    \end{align*}
+
+    % \begin{align*}
+    %     &\pard{\frac{Gm_j(\vep_{xj}-\vep_{xi})}{\sqrt{(\vep_{xj}-\vep_{xi})^2+(\vep_{yj}-\vep_{yi})^2+(\vep_{zj}-\vep_{zi})^2}^3}}{\vep_{yj}}\\
+    %     =&\pard{\frac{Gm_jC_x}{\sqrt{(\vep_{yj}-\vep_{yi})^2+C_x^2+C_z^2}^3}}{\vep_{yj}}\\
+    %     =&-\frac{3}{2}\frac{Gm_jC_x\cdot 2(\vep_{yj}-\vep_{yi})}{\sqrt{(\vep_{yj}-\vep_{yi})^2+C_x^2+C_z^2}^5}\\
+    %     =&-\frac{3Gm_jC_xC_y}{\sqrt{C_x^2+C_y^2+C_z^2}^5}\\
+    % \end{align*}
+    \begin{align*}
+        \pard{\frac{Gm_j(\vep_{xj}-\vep_{xi})}{\sqrt{(\vep_{xj}-\vep_{xi})^2+(\vep_{yj}-\vep_{yi})^2+(\vep_{zj}-\vep_{zi})^2}^3}}{\vep_{yj}}
+        &=\pard{\frac{Gm_jC_x}{\sqrt{C_x^2+C_y^2+C_z^2}^3}}{\vep_{C_y}}\cdot\der{C_y}{\vep_{yj}}\\
+        &=-\frac{3}{2}\frac{Gm_jC_x\cdot 2C_y}{\sqrt{C_x^2+C_y^2+C_z^2}^5}\cdot1\\
+        &=-\frac{3Gm_jC_xC_y}{\sqrt{C_x^2+C_y^2+C_z^2}^5}\\
+    \end{align*}
+
+    \begin{align*}
+        \pard{\frac{Gm_j(\vep_{xj}-\vep_{xi})}{\sqrt{(\vep_{xj}-\vep_{xi})^2+(\vep_{yj}-\vep_{yi})^2+(\vep_{zj}-\vep_{zi})^2}^3}}{\vep_{xi}}
+        &=\pard{\frac{Gm_jC_x}{\sqrt{C_x^2+C_y^2+C_z^2}^3}}{C_x} \cdot \der{C_x}{\vep_{xi}}\\
+        &=Gm_j\left(\frac{C_y^2+C_z^2-2C_x^2}{\sqrt{C_x^2+C_y^2+C_z^2}^5}\right) \cdot -1\\
+        &=-Gm_j\left(\frac{C_y^2+C_z^2-2C_x^2}{\sqrt{C_x^2+C_y^2+C_z^2}^5}\right)\\
+    \end{align*}
+
+    So the original equation becomes
+    \begin{align*}
+        \ders{\vev_{xi}}{t}
+        &=\begin{aligned}[t]
+            &\sum_{j\neq i}Gm_j\left(\frac{C_y^2+C_z^2-2C_x^2}{\sqrt{C_x^2+C_y^2+C_z^2}^5}\right) \cdot \der{\vep_{xj}}{t}\\
+            &+\sum_{j\neq i}-\frac{3Gm_jC_xC_y}{\sqrt{C_x^2+C_y^2+C_z^2}^5} \cdot \der{\vep_{y|z\,j}}{t}\\
+            &+\sum_{j\neq i}-Gm_j\left(\frac{C_y^2+C_z^2-2C_x^2}{\sqrt{C_x^2+C_y^2+C_z^2}^5}\right) \cdot \der{\vep_{xi}}{t}\\
+        \end{aligned}\\
+        &=\sum_{j\neq i}\begin{aligned}[t]
+            &\left(Gm_j\left(\frac{C_y^2+C_z^2-2C_x^2}{\sqrt{C_x^2+C_y^2+C_z^2}^5}\right) \cdot \der{\vep_{xj}}{t}\right.\\
+            &-\frac{3Gm_jC_xC_y}{\sqrt{C_x^2+C_y^2+C_z^2}^5} \cdot \der{\vep_{y|z\,j}}{t}\\
+            &\left.-Gm_j\left(\frac{C_y^2+C_z^2-2C_x^2}{\sqrt{C_x^2+C_y^2+C_z^2}^5}\right) \cdot \der{\vep_{xi}}{t}\right)\\
+        \end{aligned}\\
+        &=\sum_{j\neq i}\frac{Gm_j}{\sqrt{C_x^2+C_y^2+C_z^2}^5}\left(\left(C_y^2+C_z^2-2C_x^2\right) \der{\vep_{xj}}{t}-3C_xC_y \der{\vep_{y|z\,j}}{t}-\left(C_y^2+C_z^2-2C_x^2\right) \der{\vep_{xi}}{t}\right)\\
+    \end{align*}
+
+
+    Let $C=\left[\begin{matrix}C_x&C_y&C_z\end{matrix}\right]^T$ and $C_l = \sqrt{C_x^2+C_y^2+C_z^2}$
+    \begin{align*}
+        \ders{\vev_{i}}{t}
+        &=\sum_{j\neq i}\frac{Gm_j}{C_l^5}\left(C_l^2\der{\vep_{j}}{t}-3(CC^T)\cdot\der{\vep_{j}}{t}-C_l^2\der{\vep_{i}}{t}+3C\odot C\odot \der{\vep_{i}}{t}\right)
+    \end{align*}
+
+
+
+
+    \clearpage
+    For single object:
+    \[
+    \begin{cases}
+        \frac{d\ve{x}_i}{dt}&=-\ve{v}_i \\
+        \frac{d\ve{v}_i}{dt}&=\sum_{j\neq i}\frac{Gm_j(\vex_j-\vex_i)}{|\vex_j-\vex_i|^3} \\
+    \end{cases}
+    \]
+
+    \[
+    \frac{d\ves}{dt}=f(\ves)
+    \]
+    where
+    \begin{align*}
+        f(\left[\begin{matrix}
+            \vex_0\\\vev_0\\
+            \vex_1\\\vev_1\\
+            \vdots\\
+            \vex_{n-1}\\\vev_{n-1}\\
+        \end{matrix}\right])
+        =
+        \left[\begin{matrix}
+            -\vev_0\\\sum_{i\neq 0}\frac{Gm_i(\vex_i-\vex_0)}{|\vex_i-\vex_0|^3}\\
+            -\vev_1\\\sum_{i\neq 1}\frac{Gm_i(\vex_i-\vex_1)}{|\vex_i-\vex_1|^3}\\
+            \vdots\\
+            -\vev_{n-1}\\\sum_{i\neq n-1}\frac{Gm_i(\vex_i-\vex_{n-1})}{|\vex_i-\vex_{n-1}|^3}\\
+        \end{matrix}\right]
+        =
+        \left[\begin{matrix}
+            -\ves_1\\\sum_{i\neq 0}\frac{Gm_i(\ves_{2i}-\ves_0)}{|\ves_{2i}-\ves_0|^3}\\
+            -\ves_3\\\sum_{i\neq 1}\frac{Gm_i(\ves_{2i}-\ves_2)}{|\ves_{2i}-\ves_2|^3}\\
+            \vdots\\
+            -\ves_{2n-1}\\\sum_{i\neq {n-1}}\frac{Gm_i(\ves_{2i}-\ves_{2n-2})}{|\ves_{2i}-\ves_{2n-2}|^3}\\
+        \end{matrix}\right]
+    \end{align*}
+
+    \begin{align*}
+        \ves&=\int f(\ves(t))dt\\
+        \Delta\ves&=\int \sum_{i=0}^{\infty}\frac{(f\circ\ves)^{(i)}(t_0)}{i!}(t-t_0)^idt\\
+        \Delta\ves&=\sum_{i=0}^{\infty}\int\frac{(f\circ\ves)^{(i)}(t_0)}{i!}(t-t_0)^idt\\
+        \Delta\ves&=\sum_{i=0}^{\infty}\frac{(f\circ\ves)^{(i)}(t_0)}{(i+1)!}\Delta t^{(i+1)}\\
+        \Delta\ves&\approx f(\ves(t_0))\Delta t+\frac{\ves'(t_0)f'(\ves(t_0))}{2}\Delta t^2\\
+        % Thrd Order Approximation (need correction for chain rule)
+        % \Delta ve{s}&\approx f(\ves(t_0))\Delta t+\frac{f'(\ves(t_0))}{2}\Delta t^2
+        %     + \frac{f''(\ves(t_0))}{6}\Delta t^3\\
+    \end{align*}
+
+    \begin{align*}
+        \frac{df}{dt}
+        &=\sum_{i=0}^{2n-1}\frac{\partial f}{\partial \ves_i}\frac{d\ves_i}{dt}\\
+    \end{align*}
+
+    For $j\in[n]$,
+    \begin{align*}
+        \frac{\partial f}{\partial \ves_{2j}}
+        &=\left[\begin{matrix}
+            \frac{\partial -\ves_1}{\partial \ves_{2j}}\\
+            \sum_{i\neq 0}\frac{\partial\frac{Gm_i(\ves_{2i}-\ves_0)}{|\ves_{2i}-\ves_0|^3}}{\partial \ves_{2j}}\\
+            \frac{\partial -\ves_3}{\partial \ves_{2j}}\\
+            \sum_{i\neq 1}\frac{\partial\frac{Gm_i(\ves_{2i}-\ves_2)}{|\ves_{2i}-\ves_2|^3}}{\partial \ves_{2j}}\\
+            \vdots\\
+            \frac{\partial -\ves_{2j+1}}{\partial \ves_{2j}}\\
+            \sum_{i\neq j}\frac{\partial\frac{Gm_i(\ves_{2i}-\ves_{2j})}{|\ves_{2i}-\ves_{2j}|^3}}{\partial \ves_{2j}}\\
+            \vdots\\
+            \frac{\partial -\ves_{2n-1}}{\partial \ves_{2j}}\\
+            \sum_{i\neq {n-1}}\frac{\partial\frac{Gm_i(\ves_{2i}-\ves_{2n-2})}{|\ves_{2i}-\ves_{2n-2}|^3}}{\partial \ves_{2j}}\\
+        \end{matrix}\right]\\
+        &=\left[\begin{matrix}
+            0\\
+            \frac{\partial\frac{Gm_j(\ves_{2j}-\ves_0)}{|\ves_{2j}-\ves_0|^3}}{\partial \ves_{2j}}\\
+            0\\
+            \frac{\partial\frac{Gm_j(\ves_{2j}-\ves_2)}{|\ves_{2j}-\ves_2|^3}}{\partial \ves_{2j}}\\
+            \vdots\\
+            0\\
+            \sum_{i\neq j}\frac{\partial\frac{Gm_i(\ves_{2i}-\ves_{2j})}{|\ves_{2i}-\ves_{2j}|^3}}{\partial \ves_{2j}}\\
+            \vdots\\
+            0\\
+            \frac{\partial\frac{Gm_j(\ves_{2j}-\ves_{2n-2})}{|\ves_{2j}-\ves_{2n-2}|^3}}{\partial \ves_{2j}}\\
+        \end{matrix}\right]\\
+    \end{align*}
+
+    \begin{align*}
+        \frac{df}{dt}(\left[\begin{matrix}
+            \vex_0\\\vev_0\\
+            \vex_1\\\vev_1\\
+            \vdots\\
+            \vex_n\\\vev_n\\
+        \end{matrix}\right])
+        &=
+        \left[\begin{matrix}
+            -\vev_0'\\\sum_{i\neq 0}\frac{Gm_i(\vex_i-\vex_0)}{|\vex_i-\vex_0|^3}\\
+            -\vev_1'\\\sum_{i\neq 1}\frac{Gm_i(\vex_i-\vex_1)}{|\vex_i-\vex_1|^3}'\\
+            \vdots\\
+            -\vev_n'\\\sum_{i\neq n}\frac{Gm_i(\vex_i-\vex_n)}{|\vex_i-\vex_n|^3}'\\
+        \end{matrix}\right]\\
+    \end{align*}
+
+\end{document}

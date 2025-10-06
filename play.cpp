@@ -8,6 +8,7 @@
 
 #include "play.h"
 #include "utils.h"
+#include <iostream>
 
 #define TPS 30
 // time per tick in ms
@@ -33,8 +34,8 @@ constexpr long double STAR_MASS_MEAN = 100.0l;
 constexpr long double STAR_MASS_VAR = 10.0l;
 
 // gravitation constant
-// constexpr long double G = 0.0000000001l;
-constexpr long double G = 0.0l;
+constexpr long double G = 0.0000000001l;
+// constexpr long double G = 0.0l;
 
 // average velocity
 constexpr long double STAR_VELOCITY = 0.01l;
@@ -50,6 +51,10 @@ SpaceObj::SpaceObj(){}
 SpaceObj::SpaceObj(long double a_mass, const myvec::vec3 &a_pos, const myvec::vec3 &a_v) :
     pos(a_pos), v(a_v), mass(a_mass) {
     normalize();
+    pdpos.clear();
+    pdv.clear();
+    ndpos.clear();
+    ndv.clear();
 }
 
 void SpaceObj::normalize() {
@@ -63,30 +68,56 @@ void SpaceObj::normalize() {
     }
 }
 
+void SpaceObj::fall1() {
+    pdv.clear();
+    pdpos = v * dt;
+}
+
 template<class T>
 void SpaceObj::fall(const std::vector<T*> objs) {
+    ndv.clear();
+    ndpos.clear();
+
     for (SpaceObj* obj: objs) {
         if (obj == this) continue;
         myvec::vec3 dp = obj->pos - pos;
         long double d = dp.sqrNorm();
         // ignore objects too far away
-        if (d > 3.0) continue;
-        if (d < STAR_RADIUS * STAR_RADIUS * 0.1l) continue;
+        if (d > 0.5) continue;
+        // if (d < STAR_RADIUS * STAR_RADIUS * 0.1l) continue;
         d = acos(1 - d/2);
+
+        long double d2 = d * d;
+        long double d3 = d * d2;
+        // long double d4 = d2 * d2;
+        // long double d5 = d2 * d3;
 
         long double d_per_norm = dp.dot(pos);
         pos -= pos * d_per_norm;
         pos.normalize();
 
-        long double dv = G * obj->mass / (d * d) * dt;
+        long double dv = G * obj->mass / d2 * dt;
 
         dp.normalize();
-        v += dp * dv;
+        pdv += dp * dv;
+
+        long double ac = G * obj->mass * 0.5 * dt / d3;
+
+        ndv += ac * (obj->pdpos - pdpos);
+
+        ndv -= (ac * 3 * (dp.dot(obj->pdpos))) * dp;
+
+        ndv += (ac * 3) * dp.hada(dp.hada(pdpos));
     }
+    // ndpos += v * dt;
+    ndpos += pdv * dt * 0.5;
 }
 
 void SpaceObj::move() {
-    pos += v * dt;
+    // pdv = ndv;
+    // pdpos = ndpos;
+    pos += pdpos + ndpos;
+    v += pdv + ndv;
 }
 
 Star::Star() {}
@@ -158,29 +189,32 @@ PlayState::PlayState(int a_seed) : seed(a_seed) {
     player = Player(1.0l);
     ship_triangle = new Triangle({0.0, 10.0, 0.0}, {3.0, -5.0, 0.0}, {-3.0, -5.0, 0.0});
     stars.clear();
-    std::mt19937 gen(seed);
+    // std::mt19937 gen(seed);
 
-    int star_cnt = STAR_COUNT_MIN + std::binomial_distribution<int>(STAR_COUNT_MAX-STAR_COUNT_MIN)(gen);
+    // int star_cnt = STAR_COUNT_MIN + std::binomial_distribution<int>(STAR_COUNT_MAX-STAR_COUNT_MIN)(gen);
 
-    std::gamma_distribution<long double> mass_gen(
-        STAR_MASS_MEAN * STAR_MASS_MEAN / STAR_MASS_VAR,
-        STAR_MASS_VAR / STAR_MASS_MEAN
-    );
+    // std::gamma_distribution<long double> mass_gen(
+    //     STAR_MASS_MEAN * STAR_MASS_MEAN / STAR_MASS_VAR,
+    //     STAR_MASS_VAR / STAR_MASS_MEAN
+    // );
 
-    std::normal_distribution<long double> velocity_gen(0.0, STAR_VELOCITY/sqrt(2));
+    // std::normal_distribution<long double> velocity_gen(0.0, STAR_VELOCITY/sqrt(2));
 
-    std::uniform_real_distribution<long double> pos_gen(-1.0, 1.0);
+    // std::uniform_real_distribution<long double> pos_gen(-1.0, 1.0);
 
-    for (int i=0;i<star_cnt;i++){
-        stars.push_back(new Star(
-            mass_gen(gen),
-            {pos_gen(gen) * 2, pos_gen(gen), pos_gen(gen)},
-            {velocity_gen(gen), velocity_gen(gen), velocity_gen(gen)}
-        ));
-    }
+    // for (int i=0;i<star_cnt;i++){
+    //     stars.push_back(new Star(
+    //         mass_gen(gen),
+    //         {pos_gen(gen) * 2, pos_gen(gen), pos_gen(gen)},
+    //         {velocity_gen(gen), velocity_gen(gen), velocity_gen(gen)}
+    //     ));
+    // }
 
-    stars.push_back(new Star(STAR_MASS_MEAN * 50.0, {1.0, 0.0, 0.0}, {0.0, 0.0, 0.0}));
-    stars.push_back(new Star(STAR_MASS_MEAN * 50.0, {-1.0, 0.0, 0.0}, {0.0, 0.0, 0.0}));
+    // stars.push_back(new Star(STAR_MASS_MEAN , { 0.10,  0.000, 1.0}, { 0.000000, -0.00010, 0.0}));
+    stars.push_back(new Star(STAR_MASS_MEAN , { 0.10,  0.000, 1.0}, { 0.000000, -0.00005, 0.0}));
+    stars.push_back(new Star(STAR_MASS_MEAN , {-0.05,  0.087, 1.0}, { 0.000087,  0.00005, 0.0}));
+    stars.push_back(new Star(STAR_MASS_MEAN , {-0.05, -0.087, 1.0}, {-0.000087,  0.00005, 0.0}));
+    // stars.push_back(new Star(STAR_MASS_MEAN * 50.0, {-1.0, 0.0, 0.0}, {0.0, 0.0, 0.0}));
 
     paused = false;
     space_pressed = false;
@@ -253,7 +287,7 @@ void PlayState::handleEvents(GameEngine* game) {
 
 void PlayState::update(GameEngine* game) {
     double cur_time = game->window->getTime();
-    if(paused) { 
+    if(paused) {
         prev_time = cur_time;
         return;
     }
@@ -283,11 +317,14 @@ void PlayState::update(GameEngine* game) {
     if (k_plus && zoom < 50000.0) zoom *= 1.01;
     if (k_minus && zoom > 400.0) zoom *= 0.99;
     for (Star* star: stars) {
-        // star->fall(stars);
+        star->fall1();
     }
-    player.fall(stars);
     for (Star* star: stars) {
-        // star->move();
+        star->fall(stars);
+    }
+    // player.fall(stars);
+    for (Star* star: stars) {
+        star->move();
         star->normalize();
     }
     player.move();
@@ -366,7 +403,7 @@ void PlayState::draw(GameEngine* game) {
             rectGridShader.setFloat("cellSize", RECT_GRID_CELL_SIZE);
             // Pass the player's world position so that the grid remains in world space.
             rectGridShader.setVec2f("gridOffset", glm::vec2(player.pos.x, player.pos.y));
-            
+
             static GLuint VAO = 0, VBO;
             if (VAO == 0) {
                 float quad[] = { -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f };
@@ -378,7 +415,7 @@ void PlayState::draw(GameEngine* game) {
                 glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
                 glEnableVertexAttribArray(0);
             }
-            
+
             glBindVertexArray(VAO);
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             glBindVertexArray(0);

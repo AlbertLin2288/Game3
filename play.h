@@ -8,7 +8,7 @@
 #include "renderer.h"
 
 struct SpaceObj {
-    myvec::vec3 pos, v;
+    myvec::vec3 pos, v, pdpos, pdv, ndpos, ndv;
     long double mass;
     SpaceObj();
     SpaceObj(long double a_mass, const myvec::vec3 &a_pos, const myvec::vec3 &a_v);
@@ -17,6 +17,7 @@ struct SpaceObj {
     void normalize();
 
     // simulate gravity
+    void fall1();
     template<class T>
     void fall(const std::vector<T*> objs);
     void move();

@@ -60,5 +60,14 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "variant": "cpp"
+    },
+    "files.exclude": {
+        "**/*.aux": { "when": "$(basename).tex" },
+        "**/*.fdb_latexmk": { "when": "$(basename).tex" },
+        "**/*.fls": { "when": "$(basename).tex" },
+        "**/*.log": { "when": "$(basename).tex" },
+        "**/*.out": { "when": "$(basename).tex" },
+        "**/*.synctex.gz": true,
+        "**/*.synctex(busy)": true,
     }
 }
