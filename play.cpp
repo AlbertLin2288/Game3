@@ -13,6 +13,7 @@
 #define TPS 30
 // time per tick in ms
 constexpr float TIME_PER_TICK = 1000.0f / TPS;
+// constexpr long double dt = TIME_PER_TICK * 0.1l;
 constexpr long double dt = TIME_PER_TICK * 0.1l;
 
 // grid
@@ -51,8 +52,8 @@ SpaceObj::SpaceObj(){}
 SpaceObj::SpaceObj(long double a_mass, const myvec::vec3 &a_pos, const myvec::vec3 &a_v) :
     pos(a_pos), v(a_v), mass(a_mass) {
     normalize();
-    pdpos.clear();
-    pdv.clear();
+    // pdpos.clear();
+    // pdv.clear();
     ndpos.clear();
     ndv.clear();
 }
@@ -68,56 +69,94 @@ void SpaceObj::normalize() {
     }
 }
 
-void SpaceObj::fall1() {
-    pdv.clear();
-    pdpos = v * dt;
-}
-
 template<class T>
-void SpaceObj::fall(const std::vector<T*> objs) {
-    ndv.clear();
-    ndpos.clear();
-
+void SpaceObj::get_der(const std::vector<T*> &objs) {
+    derpos.clear();
+    derv.clear();
     for (SpaceObj* obj: objs) {
         if (obj == this) continue;
-        myvec::vec3 dp = obj->pos - pos;
+        myvec::vec3 dp = obj->npos - npos;
         long double d = dp.sqrNorm();
         // ignore objects too far away
         if (d > 0.5) continue;
         // if (d < STAR_RADIUS * STAR_RADIUS * 0.1l) continue;
         d = acos(1 - d/2);
-
-        long double d2 = d * d;
-        long double d3 = d * d2;
-        // long double d4 = d2 * d2;
-        // long double d5 = d2 * d3;
-
-        long double d_per_norm = dp.dot(pos);
-        pos -= pos * d_per_norm;
-        pos.normalize();
-
-        long double dv = G * obj->mass / d2 * dt;
-
+        // d = std::max(acos(1 - d/2), 0.01);
+        dp -= npos * npos.dot(dp);
         dp.normalize();
-        pdv += dp * dv;
 
-        long double ac = G * obj->mass * 0.5 * dt / d3;
+        long double dv;
+        if (d>0.003) {
+            dv = G * obj->mass / (d * d) * dt;
+        } else {
+            dv = G * obj->mass * d / (0.000000027) * dt;
+        }
 
-        ndv += ac * (obj->pdpos - pdpos);
-
-        ndv -= (ac * 3 * (dp.dot(obj->pdpos))) * dp;
-
-        ndv += (ac * 3) * dp.hada(dp.hada(pdpos));
+        derv += dp * dv;
     }
-    // ndpos += v * dt;
-    ndpos += pdv * dt * 0.5;
+
+    derpos += nv * dt;
+}
+
+template<class T>
+void SpaceObj::gety1(const std::vector<T*> &objs) {
+    npos = pos;
+    nv = v;
+    ndpos.clear();
+    ndv.clear();
+}
+
+template<class T>
+void SpaceObj::getk1(const std::vector<T*> &objs) {
+    get_der(objs);
+    ndpos += derpos / 6;
+    ndv += derv / 6;
+}
+
+template<class T>
+void SpaceObj::gety2(const std::vector<T*> &objs) {
+    npos = pos + derpos / 2;
+    nv = v + derv / 2;
+}
+
+template<class T>
+void SpaceObj::getk2(const std::vector<T*> &objs) {
+    get_der(objs);
+    ndpos += derpos / 3;
+    ndv += derv / 3;
+}
+
+template<class T>
+void SpaceObj::gety3(const std::vector<T*> &objs) {
+    npos = pos + derpos / 2;
+    nv = v + derv / 2;
+}
+
+template<class T>
+void SpaceObj::getk3(const std::vector<T*> &objs) {
+    get_der(objs);
+    ndpos += derpos / 3;
+    ndv += derv / 3;
+}
+
+template<class T>
+void SpaceObj::gety4(const std::vector<T*> &objs) {
+    npos = pos + derpos;
+    nv = v + derv;
+}
+
+template<class T>
+void SpaceObj::getk4(const std::vector<T*> &objs) {
+    get_der(objs);
+    ndpos += derpos / 6;
+    ndv += derv / 6;
 }
 
 void SpaceObj::move() {
     // pdv = ndv;
     // pdpos = ndpos;
-    pos += pdpos + ndpos;
-    v += pdv + ndv;
+    pos += ndpos;
+    v += ndv;
 }
 
 Star::Star() {}
@@ -211,10 +250,14 @@ PlayState::PlayState(int a_seed) : seed(a_seed) {
     // }
 
     // stars.push_back(new Star(STAR_MASS_MEAN , { 0.10,  0.000, 1.0}, { 0.000000, -0.00010, 0.0}));
+    // stars.push_back(new Star(STAR_MASS_MEAN * 50.0, {-1.0, 0.0, 0.0}, {0.0, 0.0, 0.0}));
+
     stars.push_back(new Star(STAR_MASS_MEAN , { 0.10,  0.000, 1.0}, { 0.000000, -0.00005, 0.0}));
     stars.push_back(new Star(STAR_MASS_MEAN , {-0.05,  0.087, 1.0}, { 0.000087,  0.00005, 0.0}));
     stars.push_back(new Star(STAR_MASS_MEAN , {-0.05, -0.087, 1.0}, {-0.000087,  0.00005, 0.0}));
-    // stars.push_back(new Star(STAR_MASS_MEAN * 50.0, {-1.0, 0.0, 0.0}, {0.0, 0.0, 0.0}));
+
+    // stars.push_back(new Star(STAR_MASS_MEAN , { 0.01,  0.0, 1.0}, { 0.0, -0.0005, 0.0}));
+    // stars.push_back(new Star(STAR_MASS_MEAN , {-0.01,  0.0, 1.0}, { 0.0,  0.0005, 0.0}));
 
     paused = false;
     space_pressed = false;
@@ -317,10 +360,28 @@ void PlayState::update(GameEngine* game) {
     if (k_plus && zoom < 50000.0) zoom *= 1.01;
     if (k_minus && zoom > 400.0) zoom *= 0.99;
     for (Star* star: stars) {
-        star->fall1();
+        star->gety1(stars);
     }
     for (Star* star: stars) {
-        star->fall(stars);
+        star->getk1(stars);
+    }
+    for (Star* star: stars) {
+        star->gety2(stars);
+    }
+    for (Star* star: stars) {
+        star->getk2(stars);
+    }
+    for (Star* star: stars) {
+        star->gety3(stars);
+    }
+    for (Star* star: stars) {
+        star->getk3(stars);
+    }
+    for (Star* star: stars) {
+        star->gety4(stars);
+    }
+    for (Star* star: stars) {
+        star->getk4(stars);
     }
     // player.fall(stars);
     for (Star* star: stars) {

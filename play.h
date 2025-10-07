@@ -8,7 +8,8 @@
 #include "renderer.h"
 
 struct SpaceObj {
-    myvec::vec3 pos, v, pdpos, pdv, ndpos, ndv;
+    myvec::vec3 pos, v, ndpos, ndv;
+    myvec::vec3 npos, nv, derpos, derv;
     long double mass;
     SpaceObj();
     SpaceObj(long double a_mass, const myvec::vec3 &a_pos, const myvec::vec3 &a_v);
@@ -17,9 +18,28 @@ struct SpaceObj {
     void normalize();
 
     // simulate gravity
-    void fall1();
+
+    // get derivate
+    // put result in derpos and derv
     template<class T>
-    void fall(const std::vector<T*> objs);
+    void get_der(const std::vector<T*> &objs);
+    // Runge–Kutta methods
+    template<class T>
+    void gety1(const std::vector<T*> &objs);
+    template<class T>
+    void getk1(const std::vector<T*> &objs);
+    template<class T>
+    void gety2(const std::vector<T*> &objs);
+    template<class T>
+    void getk2(const std::vector<T*> &objs);
+    template<class T>
+    void gety3(const std::vector<T*> &objs);
+    template<class T>
+    void getk3(const std::vector<T*> &objs);
+    template<class T>
+    void gety4(const std::vector<T*> &objs);
+    template<class T>
+    void getk4(const std::vector<T*> &objs);
     void move();
 };
 

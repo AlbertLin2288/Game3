@@ -54,4 +54,5 @@ namespace myvec
     vec3 operator-(const vec3 &lhs, const vec3 &rhs);
     vec3 operator*(const vec3 &lhs, const long double &rhs);
     vec3 operator*(const long double &lhs, const vec3 &rhs);
+    vec3 operator/(const vec3 &lhs, const long double &rhs);
 }

@@ -225,5 +225,13 @@ namespace myvec {
             lhs * rhs.z
         );
     }
+
+        vec3 operator/(const vec3 &lhs, const long double &rhs) {
+            return vec3(
+                lhs.x / rhs,
+                lhs.y / rhs,
+                lhs.z / rhs
+            );
+        }
 }
 
